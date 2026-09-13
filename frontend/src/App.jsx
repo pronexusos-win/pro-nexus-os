@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Routes, Route, Link, useLocation } from 'react-router-dom';
+import { Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
 import liff from '@line/liff';
+import { Users, ShoppingBag, QrCode, Settings, ChevronLeft, ShieldCheck, Zap } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 const COMPANY_LIFF_IDS = {
   'pro_nexus': '2011564874-MNIECumQ',
@@ -9,203 +11,142 @@ const COMPANY_LIFF_IDS = {
   'peak_icon': '2011580328-yWlEyeOK'
 };
 
-const TeamUI = () => (
-  <div className="p-6">
-    <div className="bg-white rounded-2xl shadow-sm border border-indigo-100 p-6 mb-6">
-      <div className="flex items-center space-x-3 mb-4">
-        <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600 font-bold text-xl">👥</div>
-        <div>
-          <h2 className="text-xl font-bold text-gray-800">ระบบจัดการทีม (RBAC)</h2>
-          <p className="text-xs text-gray-500">ควบคุมสิทธิ์และโครงสร้างสายงานทีมงาน</p>
-        </div>
-      </div>
-      <div className="border-t border-gray-100 pt-4">
-        <p className="text-sm text-gray-600 mb-4">สถานะสิทธิ์ปัจจุบัน: <span className="px-2 py-1 bg-indigo-100 text-indigo-700 rounded-md font-semibold text-xs">Admin / Member</span></p>
-        <div className="bg-gray-50 p-4 rounded-xl text-center text-gray-500 text-sm">
-          ยังไม่มีข้อมูลรายชื่อลูกทีมในระบบ
-        </div>
-      </div>
-    </div>
-    <div className="text-center">
-      <Link to="/" className="inline-block px-6 py-2.5 bg-gray-900 text-white rounded-xl font-medium text-sm shadow hover:bg-gray-800 transition">← กลับหน้าเมนูหลัก</Link>
-    </div>
+// URL ของ API หลังบ้าน (FastAPI บน Railway)
+const BACKEND_URL = 'https://pro-nexus-os-production.up.railway.app';
+
+const pageTransition = {
+  initial: { opacity: 0, y: 15 },
+  animate: { opacity: 1, y: 0 },
+  exit: { opacity: 0, y: -15 },
+  transition: { duration: 0.3 }
+};
+
+const BackButton = () => (
+  <div className="text-center mt-8">
+    <Link to="/" className="inline-flex items-center justify-center px-6 py-3 bg-gray-900 text-white rounded-2xl font-medium text-sm shadow-lg hover:bg-gray-800 hover:shadow-xl transition-all active:scale-95">
+      <ChevronLeft className="w-4 h-4 mr-1" /> เมนูหลัก
+    </Link>
   </div>
+);
+
+const TeamUI = () => (
+  <motion.div {...pageTransition} className="p-6">
+    <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white p-6">
+      <div className="flex items-center space-x-4 mb-6">
+        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center text-white shadow-indigo-200 shadow-lg"><Users className="w-6 h-6" /></div>
+        <div><h2 className="text-xl font-bold text-gray-800">ระบบจัดการทีม</h2><p className="text-sm text-gray-500">RBAC & โครงสร้างสายงาน</p></div>
+      </div>
+      <div className="bg-gray-50/50 p-6 rounded-2xl border border-gray-100 text-center flex flex-col items-center justify-center h-40">
+        <ShieldCheck className="w-8 h-8 text-indigo-300 mb-3" />
+        <p className="text-gray-500 text-sm font-medium">รอเชื่อมต่อฐานข้อมูลรายชื่อ</p>
+      </div>
+    </div>
+    <BackButton />
+  </motion.div>
 );
 
 const ShopUI = () => (
-  <div className="p-6">
-    <div className="bg-white rounded-2xl shadow-sm border border-emerald-100 p-6 mb-6">
-      <div className="flex items-center space-x-3 mb-4">
-        <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600 font-bold text-xl">🛒</div>
-        <div>
-          <h2 className="text-xl font-bold text-gray-800">ระบบร้านค้า (Shopping)</h2>
-          <p className="text-xs text-gray-500">เลือกซื้อสินค้าและแพ็กเกจระบบ</p>
-        </div>
+  <motion.div {...pageTransition} className="p-6">
+    <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white p-6">
+      <div className="flex items-center space-x-4 mb-6">
+        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-white shadow-emerald-200 shadow-lg"><ShoppingBag className="w-6 h-6" /></div>
+        <div><h2 className="text-xl font-bold text-gray-800">ร้านค้าแพ็กเกจ</h2><p className="text-sm text-gray-500">เลือกอัปเกรดระบบของคุณ</p></div>
       </div>
-      <div className="border-t border-gray-100 pt-4">
-        <div className="grid grid-cols-2 gap-3">
-          <div className="border border-gray-200 rounded-xl p-3 text-center">
-            <div className="h-20 bg-gray-100 rounded-lg mb-2 flex items-center justify-center text-gray-400">📦</div>
-            <h3 className="font-bold text-sm text-gray-800">แพ็กเกจเริ่มต้น</h3>
-            <p className="text-xs text-emerald-600 font-semibold mt-1">฿990 / เดือน</p>
-          </div>
-          <div className="border border-gray-200 rounded-xl p-3 text-center">
-            <div className="h-20 bg-gray-100 rounded-lg mb-2 flex items-center justify-center text-gray-400">🚀</div>
-            <h3 className="font-bold text-sm text-gray-800">แพ็กเกจโปร</h3>
-            <p className="text-xs text-emerald-600 font-semibold mt-1">฿2,990 / เดือน</p>
-          </div>
+      <div className="grid grid-cols-1 gap-4">
+        <div className="group border border-gray-100 rounded-2xl p-5 bg-white hover:border-emerald-500 hover:shadow-lg transition-all cursor-pointer">
+          <div className="flex justify-between items-center"><div><h3 className="font-bold text-gray-800 text-lg">Pro Package</h3><p className="text-xs text-gray-500">ฟังก์ชันพื้นฐาน</p></div><span className="text-emerald-600 font-extrabold">฿990</span></div>
         </div>
       </div>
     </div>
-    <div className="text-center">
-      <Link to="/" className="inline-block px-6 py-2.5 bg-gray-900 text-white rounded-xl font-medium text-sm shadow hover:bg-gray-800 transition">← กลับหน้าเมนูหลัก</Link>
-    </div>
-  </div>
+    <BackButton />
+  </motion.div>
 );
 
 const QrCodeUI = () => (
-  <div className="p-6">
-    <div className="bg-white rounded-2xl shadow-sm border border-amber-100 p-6 mb-6">
-      <div className="flex items-center space-x-3 mb-4">
-        <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center text-amber-600 font-bold text-xl">📱</div>
-        <div>
-          <h2 className="text-xl font-bold text-gray-800">ระบบ QR Code</h2>
-          <p className="text-xs text-gray-500">สร้างหรือสแกนคิวอาร์โค้ดเพื่อเข้าถึงข้อมูลสายงาน/ชำระเงิน</p>
-        </div>
+  <motion.div {...pageTransition} className="p-6">
+    <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white p-6 text-center">
+      <div className="inline-flex w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 items-center justify-center text-white shadow-amber-200 shadow-lg mb-4"><QrCode className="w-6 h-6" /></div>
+      <h2 className="text-xl font-bold text-gray-800 mb-1">QR Code ของคุณ</h2>
+      <p className="text-sm text-gray-500 mb-6">ใช้สำหรับสแกนจ่ายหรือเชิญเข้าทีม</p>
+      <div className="w-56 h-56 mx-auto bg-gray-50 rounded-3xl border-2 border-dashed border-gray-200 flex items-center justify-center mb-6 relative overflow-hidden">
+        <QrCode className="w-20 h-20 text-gray-300" />
       </div>
-      <div className="border-t border-gray-100 pt-4 text-center">
-        <div className="w-48 h-48 bg-gray-100 border-2 border-dashed border-gray-300 rounded-2xl mx-auto flex flex-col items-center justify-center p-4 mb-4">
-          <span className="text-4xl mb-2">📷</span>
-          <p className="text-xs text-gray-500 font-medium">QR Code ประจำตัวของคุณ</p>
-        </div>
-        <button className="w-full py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-semibold shadow-sm transition">
-          สแกน QR Code อื่นๆ
-        </button>
-      </div>
+      <button className="w-full py-4 bg-gray-900 text-white rounded-2xl font-semibold shadow-xl hover:bg-gray-800 active:scale-95 transition-all flex justify-center items-center"><QrCode className="w-5 h-5 mr-2" /> สแกน QR Code อื่น</button>
     </div>
-    <div className="text-center">
-      <Link to="/" className="inline-block px-6 py-2.5 bg-gray-900 text-white rounded-xl font-medium text-sm shadow hover:bg-gray-800 transition">← กลับหน้าเมนูหลัก</Link>
-    </div>
-  </div>
+    <BackButton />
+  </motion.div>
 );
 
-const SuperAdminUI = () => {
-  const [enableReferral, setEnableReferral] = useState(true);
-  const [enableMoneyFlow, setEnableMoneyFlow] = useState(false);
-
-  return (
-    <div className="p-6">
-      <div className="flex items-center space-x-3 mb-6">
-        <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center text-red-600 font-bold text-xl">⚙️</div>
-        <div>
-          <h2 className="text-xl font-bold text-gray-800">ตั้งค่าระบบ (Super Admin)</h2>
-          <p className="text-xs text-gray-500">ควบคุมระบบหลังบ้านและการกระจายรายได้</p>
-        </div>
+const SuperAdminUI = () => (
+  <motion.div {...pageTransition} className="p-6">
+    <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white p-6">
+      <div className="flex items-center space-x-4 mb-8">
+        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center text-white shadow-red-200 shadow-lg"><Settings className="w-6 h-6" /></div>
+        <div><h2 className="text-xl font-bold text-gray-800">Super Admin</h2><p className="text-sm text-gray-500">ตั้งค่าระบบส่วนกลาง</p></div>
       </div>
-
-      <div className="bg-white rounded-2xl shadow-sm border border-red-100 p-5 mb-6 space-y-6">
-        <div className="flex justify-between items-center">
-          <div className="pr-4">
-            <h3 className="font-semibold text-gray-800 text-sm">ค่าการแนะนำ (Referral)</h3>
-            <p className="text-xs text-gray-400 mt-0.5">เปิด/ปิด โบนัสแนะนำสมาชิกใหม่</p>
-          </div>
-          <button 
-            onClick={() => setEnableReferral(!enableReferral)}
-            className={`w-14 h-8 rounded-full transition-colors duration-300 relative focus:outline-none flex-shrink-0 ${enableReferral ? 'bg-green-500' : 'bg-gray-300'}`}
-          >
-            <span className={`block w-6 h-6 bg-white rounded-full absolute top-1 transition-transform duration-300 shadow-sm ${enableReferral ? 'translate-x-7' : 'translate-x-1'}`}></span>
-          </button>
+      <div className="space-y-4">
+        <div className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100">
+          <div><h3 className="font-bold text-gray-800 text-sm">ระบบจ่าย Referral</h3><p className="text-xs text-gray-500">โบนัสแนะนำสมาชิก</p></div>
+          <div className="w-12 h-6 bg-green-500 rounded-full relative shadow-inner"><div className="w-5 h-5 bg-white rounded-full absolute top-0.5 right-0.5 shadow-sm"></div></div>
         </div>
-
-        <div className="border-t border-gray-100 pt-4 flex justify-between items-center">
-          <div className="pr-4">
-            <h3 className="font-semibold text-gray-800 text-sm">เงินไหล/เงินล้น (Money Flow)</h3>
-            <p className="text-xs text-gray-400 mt-0.5">เปิด/ปิด การกระจายรายได้แบบ Spillover</p>
-          </div>
-          <button 
-            onClick={() => setEnableMoneyFlow(!enableMoneyFlow)}
-            className={`w-14 h-8 rounded-full transition-colors duration-300 relative focus:outline-none flex-shrink-0 ${enableMoneyFlow ? 'bg-green-500' : 'bg-gray-300'}`}
-          >
-            <span className={`block w-6 h-6 bg-white rounded-full absolute top-1 transition-transform duration-300 shadow-sm ${enableMoneyFlow ? 'translate-x-7' : 'translate-x-1'}`}></span>
-          </button>
-        </div>
-      </div>
-
-      <div className="text-center">
-        <Link to="/" className="inline-block px-6 py-2.5 bg-gray-900 text-white rounded-xl font-medium text-sm shadow hover:bg-gray-800 transition">← กลับหน้าเมนูหลัก</Link>
       </div>
     </div>
-  );
-};
+    <BackButton />
+  </motion.div>
+);
 
 const Home = ({ profile, companyKey }) => (
-  <div className="p-6">
-    <div className="bg-gradient-to-br from-indigo-50 to-blue-50 border border-indigo-100 rounded-2xl p-4 mb-6 text-center shadow-inner">
+  <motion.div {...pageTransition} className="p-6">
+    <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white p-5 mb-8 flex items-center space-x-4">
       {profile ? (
-        <div className="flex items-center space-x-3 text-left">
-          <img src={profile.pictureUrl} alt="Profile" className="w-14 h-14 rounded-full border-2 border-white shadow-md flex-shrink-0" />
-          <div className="overflow-hidden">
-            <h2 className="font-bold text-gray-800 truncate">{profile.displayName}</h2>
-            <p className="text-xs text-emerald-600 font-medium">Verified LIFF User</p>
-            <span className="inline-block mt-1 px-2 py-0.5 bg-indigo-600 text-white text-[10px] rounded-full uppercase font-semibold">
-              {companyKey.replace('_', ' ')}
-            </span>
+        <>
+          <img src={profile.pictureUrl} alt="Profile" className="w-16 h-16 rounded-2xl object-cover shadow-sm" />
+          <div>
+            <h2 className="font-bold text-gray-800 text-lg tracking-tight">{profile.displayName}</h2>
+            <div className="flex items-center mt-1">
+              <span className="flex items-center text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg"><ShieldCheck className="w-3 h-3 mr-1" /> Verified</span>
+              <span className="ml-2 text-[10px] text-gray-400 font-medium uppercase tracking-wider bg-gray-100 px-2 py-1 rounded-lg">{companyKey.replace('_', ' ')}</span>
+            </div>
           </div>
-        </div>
+        </>
       ) : (
-        <div className="animate-pulse flex items-center space-x-3 text-left">
-          <div className="w-14 h-14 bg-gray-200 rounded-full"></div>
-          <div className="space-y-2 flex-1">
-            <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-            <div className="h-3 bg-gray-200 rounded w-1/2"></div>
-          </div>
+        <div className="animate-pulse flex items-center space-x-4 w-full">
+          <div className="w-16 h-16 bg-gray-200 rounded-2xl"></div>
+          <div className="space-y-3 flex-1"><div className="h-4 bg-gray-200 rounded-md w-1/2"></div></div>
         </div>
       )}
     </div>
 
     <div className="grid grid-cols-2 gap-4">
-      <Link to="/team" className="bg-white hover:bg-indigo-50/50 border border-gray-100 p-5 rounded-2xl shadow-sm hover:shadow-md transition-all flex flex-col items-center text-center group">
-        <div className="w-14 h-14 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center text-2xl mb-3 group-hover:scale-110 transition-transform">
-          👥
-        </div>
-        <h3 className="font-bold text-gray-800 text-sm">จัดการทีม</h3>
-        <p className="text-[11px] text-gray-400 mt-0.5">RBAC & สมาชิก</p>
+      <Link to="/team" className="group bg-white rounded-3xl p-5 shadow-[0_4px_20px_rgb(0,0,0,0.03)] border border-gray-50 hover:shadow-lg hover:border-indigo-100 transition-all active:scale-95 flex flex-col items-center text-center">
+        <div className="w-14 h-14 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform"><Users className="w-7 h-7" /></div>
+        <h3 className="font-bold text-gray-800 text-sm">จัดการทีม</h3><p className="text-[11px] text-gray-400 mt-1">สิทธิ์ & สายงาน</p>
       </Link>
-
-      <Link to="/shop" className="bg-white hover:bg-emerald-50/50 border border-gray-100 p-5 rounded-2xl shadow-sm hover:shadow-md transition-all flex flex-col items-center text-center group">
-        <div className="w-14 h-14 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center text-2xl mb-3 group-hover:scale-110 transition-transform">
-          🛒
-        </div>
-        <h3 className="font-bold text-gray-800 text-sm">ระบบร้านค้า</h3>
-        <p className="text-[11px] text-gray-400 mt-0.5">ช้อปปิ้งแพ็กเกจ</p>
+      <Link to="/shop" className="group bg-white rounded-3xl p-5 shadow-[0_4px_20px_rgb(0,0,0,0.03)] border border-gray-50 hover:shadow-lg hover:border-emerald-100 transition-all active:scale-95 flex flex-col items-center text-center">
+        <div className="w-14 h-14 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform"><ShoppingBag className="w-7 h-7" /></div>
+        <h3 className="font-bold text-gray-800 text-sm">ร้านค้า</h3><p className="text-[11px] text-gray-400 mt-1">แพ็กเกจระบบ</p>
       </Link>
-
-      <Link to="/qrcode" className="bg-white hover:bg-amber-50/50 border border-gray-100 p-5 rounded-2xl shadow-sm hover:shadow-md transition-all flex flex-col items-center text-center group">
-        <div className="w-14 h-14 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center text-2xl mb-3 group-hover:scale-110 transition-transform">
-          📱
-        </div>
-        <h3 className="font-bold text-gray-800 text-sm">QR Code</h3>
-        <p className="text-[11px] text-gray-400 mt-0.5">สร้างและสแกน</p>
+      <Link to="/qrcode" className="group bg-white rounded-3xl p-5 shadow-[0_4px_20px_rgb(0,0,0,0.03)] border border-gray-50 hover:shadow-lg hover:border-amber-100 transition-all active:scale-95 flex flex-col items-center text-center">
+        <div className="w-14 h-14 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform"><QrCode className="w-7 h-7" /></div>
+        <h3 className="font-bold text-gray-800 text-sm">QR Code</h3><p className="text-[11px] text-gray-400 mt-1">สแกน & ชำระเงิน</p>
       </Link>
-
-      <Link to="/admin" className="bg-white hover:bg-red-50/50 border border-red-100 p-5 rounded-2xl shadow-sm hover:shadow-md transition-all flex flex-col items-center text-center group">
-        <div className="w-14 h-14 bg-red-50 text-red-600 rounded-2xl flex items-center justify-center text-2xl mb-3 group-hover:scale-110 transition-transform">
-          ⚙️
-        </div>
-        <h3 className="font-bold text-gray-800 text-sm">Super Admin</h3>
-        <p className="text-[11px] text-gray-400 mt-0.5">ตั้งค่าระบบหลัก</p>
+      <Link to="/admin" className="group bg-white rounded-3xl p-5 shadow-[0_4px_20px_rgb(0,0,0,0.03)] border border-gray-50 hover:shadow-lg hover:border-red-100 transition-all active:scale-95 flex flex-col items-center text-center">
+        <div className="w-14 h-14 bg-red-50 text-red-600 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform"><Settings className="w-7 h-7" /></div>
+        <h3 className="font-bold text-gray-800 text-sm">ระบบตั้งค่า</h3><p className="text-[11px] text-gray-400 mt-1">Super Admin</p>
       </Link>
     </div>
-  </div>
+  </motion.div>
 );
 
 export default function App() {
   const [profile, setProfile] = useState(null);
   const [error, setError] = useState('');
   const location = useLocation();
+  const navigate = useNavigate();
 
   const queryParams = new URLSearchParams(location.search);
   const companyKey = queryParams.get('company') || 'pro_nexus';
+  const targetPath = queryParams.get('path');
   const activeLiffId = COMPANY_LIFF_IDS[companyKey] || COMPANY_LIFF_IDS['pro_nexus'];
 
   useEffect(() => {
@@ -214,24 +155,49 @@ export default function App() {
         if (!liff.isLoggedIn()) {
           liff.login();
         } else {
-          liff.getProfile().then(setProfile).catch(err => setError("ดึงข้อมูลไม่ได้: " + err.message));
+          liff.getProfile().then(userProfile => {
+            setProfile(userProfile);
+            
+            // 🚀 [เพิ่มใหม่] ส่งข้อมูลไปหา Backend FastAPI เพื่ออัปเดตสิทธิ์และ Rich Menu
+            fetch(`${BACKEND_URL}/api/v1/${companyKey}/sync-user`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                userId: userProfile.userId,
+                displayName: userProfile.displayName,
+                pictureUrl: userProfile.pictureUrl
+              })
+            }).catch(err => console.log("Backend Sync Error:", err)); // แอบทำเงียบๆ หลังบ้าน
+
+            // Redirect ตาม Path ของ Rich Menu
+            if (targetPath) {
+              navigate(targetPath, { replace: true });
+            }
+          }).catch(err => setError(err.message));
         }
       })
-      .catch(err => setError("LIFF Init Error: " + err.message));
-  }, [activeLiffId]);
+      .catch(err => setError("LIFF Error: " + err.message));
+  }, [activeLiffId, targetPath, navigate, companyKey]);
 
   return (
-    <div className="min-h-screen bg-gray-100 font-sans flex justify-center">
-      <div className="w-full max-w-md bg-white shadow-2xl min-h-screen flex flex-col">
-        <header className="bg-gradient-to-r from-gray-900 to-gray-800 text-white p-4 text-center shadow-md relative flex items-center justify-between">
-          <div className="w-6"></div>
-          <h1 className="text-lg font-extrabold tracking-tight">Pro Nexus OS</h1>
-          <span className="bg-green-500 text-[10px] px-2 py-0.5 rounded-full uppercase font-semibold shadow">
+    <div className="min-h-screen bg-slate-50 font-sans flex justify-center selection:bg-indigo-100">
+      <div className="w-full max-w-md bg-slate-50 min-h-screen flex flex-col relative overflow-hidden">
+        <div className="absolute top-[-10%] left-[-10%] w-64 h-64 bg-indigo-300 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob"></div>
+        <div className="absolute top-[-10%] right-[-10%] w-64 h-64 bg-emerald-300 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000"></div>
+        
+        <header className="px-6 pt-10 pb-4 relative z-10 flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <div className="w-8 h-8 bg-gray-900 rounded-xl flex items-center justify-center"><Zap className="w-4 h-4 text-white" /></div>
+            <h1 className="text-xl font-extrabold tracking-tight text-gray-900">Nexus OS</h1>
+          </div>
+          <span className="bg-white/60 backdrop-blur-md text-[10px] px-3 py-1.5 rounded-full uppercase font-bold text-indigo-600 shadow-sm border border-indigo-50">
             {companyKey.replace('_', ' ')}
           </span>
         </header>
-        {error && <div className="p-3 bg-red-50 text-red-600 text-center border-b border-red-100 text-xs">{error}</div>}
-        <main className="flex-grow">
+        
+        {error && <div className="mx-6 p-3 bg-red-50 text-red-600 rounded-xl border border-red-100 text-xs text-center z-10">{error}</div>}
+        
+        <main className="flex-grow z-10 relative">
           <Routes>
             <Route path="/" element={<Home profile={profile} companyKey={companyKey} />} />
             <Route path="/team" element={<TeamUI />} />
