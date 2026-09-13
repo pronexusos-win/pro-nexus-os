@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
 import liff from '@line/liff';
-import { Users, ShoppingBag, QrCode, Settings, ChevronLeft, ShieldCheck, Zap, Share2, Copy, CheckCircle2, UserPlus } from 'lucide-react';
+import { Users, ShoppingBag, QrCode, Settings, ChevronLeft, ShieldCheck, Zap, Share2, Copy, CheckCircle2, UserPlus, Camera } from 'lucide-react';
 import { motion } from 'framer-motion';
+// นำเข้าเครื่องมือเปิดกล้อง
+import { QrReader } from 'react-qr-reader';
 
 const COMPANY_LIFF_IDS = {
   'pro_nexus': '2011564874-MNIECumQ',
@@ -28,13 +30,15 @@ const BackButton = () => (
   </div>
 );
 
-// --- หน้าจัดการทีม (เพิ่มปุ่มเชิญและข้อมูลทีม) ---
+// --- หน้าจัดการทีม ---
 const TeamUI = ({ profile, companyKey, activeLiffId }) => {
   const referralLink = `https://liff.line.me/${activeLiffId}/?company=${companyKey}&ref=${profile?.userId || 'GUEST'}&path=/team`;
+  const [copied, setCopied] = useState(false);
   
   const copyLink = () => {
     navigator.clipboard.writeText(referralLink);
-    alert('คัดลอกลิงก์แนะนำเรียบร้อยแล้ว!');
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
   return (
@@ -57,7 +61,8 @@ const TeamUI = ({ profile, companyKey, activeLiffId }) => {
         </div>
 
         <button onClick={copyLink} className="w-full py-3 mb-3 bg-indigo-600 text-white rounded-2xl font-semibold shadow-lg shadow-indigo-200 hover:bg-indigo-700 active:scale-95 transition-all flex justify-center items-center">
-          <Copy className="w-4 h-4 mr-2" /> คัดลอกลิงก์เชิญเพื่อน
+          {copied ? <CheckCircle2 className="w-4 h-4 mr-2" /> : <Copy className="w-4 h-4 mr-2" />}
+          {copied ? 'คัดลอกเรียบร้อย!' : 'คัดลอกลิงก์เชิญเพื่อน'}
         </button>
       </div>
       <BackButton />
@@ -82,9 +87,12 @@ const ShopUI = () => (
   </motion.div>
 );
 
-// --- หน้า QR Code (เพิ่มระบบแชร์และ Copy ลิงก์) ---
+// --- หน้า QR Code (ฟังก์ชันเปิดกล้องสแกนจริง) ---
 const QrCodeUI = ({ profile, companyKey, activeLiffId }) => {
   const [copied, setCopied] = useState(false);
+  const [showScanner, setShowScanner] = useState(false);
+  const [scanResult, setScanResult] = useState('');
+  
   const referralLink = `https://liff.line.me/${activeLiffId}/?company=${companyKey}&ref=${profile?.userId || 'GUEST'}&path=/team`;
 
   const copyLink = () => {
@@ -102,27 +110,35 @@ const QrCodeUI = ({ profile, companyKey, activeLiffId }) => {
           contents: {
             type: "bubble",
             body: {
-              type: "box",
-              layout: "vertical",
+              type: "box", layout: "vertical",
               contents: [
                 { type: "text", text: "🚀 เชิญเข้าร่วมทีม!", weight: "bold", size: "xl", color: "#1e293b" },
                 { type: "text", text: `คุณได้รับคำเชิญเข้าร่วมสายงานใน ${companyKey.replace('_', ' ').toUpperCase()}`, wrap: true, color: "#64748b", size: "sm", margin: "md" }
               ]
             },
             footer: {
-              type: "box",
-              layout: "vertical",
+              type: "box", layout: "vertical",
               contents: [
                 { type: "button", style: "primary", color: "#4f46e5", action: { type: "uri", label: "สมัครสมาชิกเลย", uri: referralLink } }
               ]
             }
           }
         }
-      ]).then(res => {
-        if (res) alert("ส่งคำเชิญเรียบร้อยแล้ว!");
-      }).catch(err => console.error(err));
+      ]).then(res => { if (res) alert("ส่งคำเชิญเรียบร้อยแล้ว!"); }).catch(err => console.error(err));
     } else {
-      alert("กรุณาเปิดในแอป LINE เพื่อใช้ฟีเจอร์นี้ครับ");
+      alert("กรุณาเปิดในแอป LINE เพื่อใช้ฟีเจอร์แชร์ครับ");
+    }
+  };
+
+  const handleScan = (result, error) => {
+    if (!!result) {
+      setScanResult(result?.text);
+      setShowScanner(false);
+      alert(`สแกนสำเร็จ: ${result?.text}`);
+      // อนาคต: ถอดรหัส URL แล้วยิง API หรือเด้งไปหน้าชำระเงิน
+    }
+    if (!!error) {
+      // ignore errors (it scans continuously)
     }
   };
 
@@ -130,13 +146,37 @@ const QrCodeUI = ({ profile, companyKey, activeLiffId }) => {
     <motion.div {...pageTransition} className="p-6">
       <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white p-6 text-center">
         <div className="inline-flex w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 items-center justify-center text-white shadow-amber-200 shadow-lg mb-4"><QrCode className="w-6 h-6" /></div>
-        <h2 className="text-xl font-bold text-gray-800 mb-1">QR Code แนะนำเพื่อน</h2>
-        <p className="text-sm text-gray-500 mb-6">ให้เพื่อนสแกนหรือส่งลิงก์เพื่อสร้างสายงาน</p>
-        
-        {/* จำลองรูป QR Code (ใช้ API สร้างรูปจริงทีหลังได้) */}
-        <div className="w-56 h-56 mx-auto bg-white rounded-3xl border border-gray-100 shadow-sm flex items-center justify-center mb-6 relative overflow-hidden p-4">
-          <img src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(referralLink)}`} alt="QR Code" className="w-full h-full object-contain mix-blend-multiply" />
-        </div>
+        <h2 className="text-xl font-bold text-gray-800 mb-1">สแกน & รับเชิญ</h2>
+        <p className="text-sm text-gray-500 mb-6">เปิดกล้องสแกน หรือส่ง QR ให้เพื่อน</p>
+
+        {/* ส่วนเปิดกล้องสแกน */}
+        {showScanner ? (
+          <div className="mb-6 rounded-3xl overflow-hidden border-2 border-amber-500 shadow-lg relative">
+             <QrReader
+                onResult={handleScan}
+                constraints={{ facingMode: 'environment' }}
+                videoStyle={{ width: '100%' }}
+              />
+              <button 
+                onClick={() => setShowScanner(false)}
+                className="absolute top-2 right-2 bg-red-500 text-white text-xs px-3 py-1 rounded-full font-bold shadow-md"
+              >
+                ปิดกล้อง
+              </button>
+          </div>
+        ) : (
+          <div className="w-56 h-56 mx-auto bg-white rounded-3xl border border-gray-100 shadow-sm flex items-center justify-center mb-6 p-4">
+            <img src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(referralLink)}`} alt="QR Code" className="w-full h-full object-contain" />
+          </div>
+        )}
+
+        <button 
+          onClick={() => setShowScanner(!showScanner)} 
+          className="w-full py-4 mb-4 bg-gray-900 text-white rounded-2xl font-semibold shadow-xl hover:bg-gray-800 active:scale-95 transition-all flex justify-center items-center"
+        >
+          {showScanner ? <QrCode className="w-5 h-5 mr-2" /> : <Camera className="w-5 h-5 mr-2" />} 
+          {showScanner ? "กลับไปแสดง QR ของฉัน" : "เปิดกล้องสแกน QR"}
+        </button>
         
         <div className="grid grid-cols-2 gap-3">
           <button onClick={copyLink} className="py-3 bg-gray-100 text-gray-700 rounded-2xl font-semibold hover:bg-gray-200 active:scale-95 transition-all flex justify-center items-center text-sm">
@@ -223,8 +263,6 @@ export default function App() {
   const queryParams = new URLSearchParams(location.search);
   const companyKey = queryParams.get('company') || 'pro_nexus';
   const targetPath = queryParams.get('path');
-  
-  // 🔥 ระบบรับค่าคนแนะนำ (Upline) จาก URL ถ้ามี
   const refUserId = queryParams.get('ref'); 
   const activeLiffId = COMPANY_LIFF_IDS[companyKey] || COMPANY_LIFF_IDS['pro_nexus'];
 
@@ -237,7 +275,6 @@ export default function App() {
           liff.getProfile().then(userProfile => {
             setProfile(userProfile);
             
-            // ส่งข้อมูลแจ้ง Backend ว่าคนนี้ล็อกอินเข้ามา (พร้อมแนบว่าใครแนะนำมาผ่าน refUserId)
             fetch(`${BACKEND_URL}/api/v1/${companyKey}/sync-user`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -245,7 +282,7 @@ export default function App() {
                 userId: userProfile.userId,
                 displayName: userProfile.displayName,
                 pictureUrl: userProfile.pictureUrl,
-                referredBy: refUserId // ส่ง ID คนแนะนำไปให้ Backend บันทึกลง Database
+                referredBy: refUserId 
               })
             }).catch(err => console.log("Backend Sync Error:", err));
 
