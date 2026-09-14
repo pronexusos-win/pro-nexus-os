@@ -10,9 +10,9 @@
 </head>
 <body class="bg-slate-100 min-h-screen text-slate-800">
 
-  <!-- Toast แจ้งเตือนการคัดลอก -->
+  <!-- Toast แจ้งเตือน -->
   <div id="toast" class="fixed top-5 right-5 bg-slate-900 text-white text-xs px-4 py-2.5 rounded-xl shadow-lg z-50 transition-opacity duration-300 opacity-0 pointer-events-none flex items-center gap-2">
-    <span>📋</span>
+    <span id="toastIcon">📋</span>
     <span id="toastMsg">คัดลอกที่อยู่สำเร็จแล้ว!</span>
   </div>
 
@@ -81,7 +81,13 @@
           <h2 class="text-lg font-bold text-slate-800">รายการคำสั่งซื้อ</h2>
           <p class="text-xs text-slate-400">ตรวจสอบสลิป ที่อยู่จัดส่ง และสถานะพัสดุ</p>
         </div>
-        <input type="text" id="searchInput" onkeyup="filterTable()" placeholder="ค้นหารหัส, ชื่อ, หรือเบอร์โทร..." class="border border-slate-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 w-full sm:w-64">
+        <div class="flex flex-wrap items-center gap-2">
+          <input type="text" id="searchInput" onkeyup="filterTable()" placeholder="ค้นหารหัส, ชื่อ, เบอร์..." class="border border-slate-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 w-full sm:w-56">
+          <button onclick="exportToCSV()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-sm font-semibold shadow-sm inline-flex items-center gap-1.5 transition">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+            Export CSV/Excel
+          </button>
+        </div>
       </div>
       <div class="overflow-x-auto">
         <table class="w-full text-left text-sm">
@@ -109,8 +115,9 @@
 
     let allOrders = [];
 
-    function showToast(msg) {
+    function showToast(msg, icon = "📋") {
       const toast = document.getElementById('toast');
+      document.getElementById('toastIcon').innerText = icon;
       document.getElementById('toastMsg').innerText = msg;
       toast.classList.remove('opacity-0', 'pointer-events-none');
       setTimeout(() => {
@@ -184,16 +191,54 @@
     function copyAddress(orderNo) {
       const order = allOrders.find(o => o.order_no === orderNo);
       if (!order || (!order.customer_name && !order.shipping_address)) {
-        showToast("⚠️ ไม่พบข้อมูลที่อยู่จัดส่ง");
+        showToast("⚠️ ไม่พบข้อมูลที่อยู่จัดส่ง", "⚠️");
         return;
       }
 
       const copyText = `ผู้รับ: ${order.customer_name || '-'}\nเบอร์โทร: ${order.customer_phone || '-'}\nที่อยู่จัดส่ง: ${order.shipping_address || '-'}`;
       navigator.clipboard.writeText(copyText).then(() => {
-        showToast(`📋 คัดลอกที่อยู่ ${orderNo} แล้ว!`);
+        showToast(`คัดลอกที่อยู่ ${orderNo} แล้ว!`, "📋");
       }).catch(() => {
-        showToast("❌ คัดลอกไม่สำเร็จ");
+        showToast("คัดลอกไม่สำเร็จ", "❌");
       });
+    }
+
+    function exportToCSV() {
+      if (!allOrders || allOrders.length === 0) {
+        showToast("ไม่มีข้อมูลออเดอร์สำหรับ Export", "⚠️");
+        return;
+      }
+
+      const company = document.getElementById('companySelect').value;
+      const headers = ["รหัสออเดอร์", "LINE User ID", "ชื่อผู้รับ", "เบอร์โทรศัพท์", "ที่อยู่จัดส่ง", "ยอดชำระ", "สถานะ", "ยอดเงินในสลิป", "วันที่ทำรายการ"];
+      
+      const rows = allOrders.map(o => [
+        `"${o.order_no || ''}"`,
+        `"${o.line_user_id || ''}"`,
+        `"${(o.customer_name || '').replace(/"/g, '""')}"`,
+        `"${(o.customer_phone || '').replace(/"/g, '""')}"`,
+        `"${(o.shipping_address || '').replace(/"/g, '""')}"`,
+        parseFloat(o.total_amount || 0).toFixed(2),
+        `"${o.status || ''}"`,
+        parseFloat(o.slip_amount || 0).toFixed(2),
+        `"${o.created_at || ''}"`
+      ]);
+
+      // ใส่ \uFEFF (UTF-8 BOM) เพื่อให้ Microsoft Excel เปิดภาษาไทยได้โดยไม่เป็นภาษาต่างดาว
+      const csvContent = "\uFEFF" + [headers.join(","), ...rows.map(r => r.join(","))].join("\r\n");
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      
+      const now = new Date();
+      const dateStr = now.toISOString().slice(0, 10).replace(/-/g, '');
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", `orders_${company}_${dateStr}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      showToast(`ดาวน์โหลดไฟล์ orders_${company}_${dateStr}.csv สำเร็จ`, "📥");
     }
 
     function renderOrdersTable(orders) {
