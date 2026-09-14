@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ใบสรุปส่งมอบพัสดุ (Carrier Handover Manifest)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&family=Prompt:wght@500;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Sarabun', sans-serif; }
+    .display-font { font-family: 'Prompt', sans-serif; }
+
+    @media print {
+      @page {
+        size: A4 portrait;
+        margin: 12mm 10mm;
+      }
+      body {
+        background: #fff !important;
+        color: #000 !important;
+        padding: 0 !important;
+      }
+      .no-print {
+        display: none !important;
+      }
+      table {
+        page-break-inside: auto;
+      }
+      tr {
+        page-break-inside: avoid;
+        page-break-after: auto;
+      }
+      thead {
+        display: table-header-group;
+      }
+      tfoot {
+        display: table-footer-group;
+      }
+    }
+  </style>
+</head>
+<body class="bg-slate-100 min-h-screen text-slate-800 p-4 sm:p-8">
+
+  <!-- Control Bar ด้านบน (ซ่อนตอนกดพิมพ์) -->
+  <div class="max-w-4xl mx-auto mb-6 bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-4 no-print">
+    <div class="flex items-center gap-3">
+      <a href="index.html" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-600 px-3 py-2 rounded-lg font-semibold transition">
+        ← กลับหน้า Admin
+      </a>
+      <select id="companySelect" onchange="loadHandoverData()" class="border border-slate-300 rounded-lg px-3 py-1.5 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500">
+        <option value="tp_extra" selected>TP Extra (BAENGPUN แบ่งปันชอป)</option>
+        <option value="pro_nexus">Pro Nexus</option>
+        <option value="luck_kio">Luck Kio</option>
+        <option value="peak_icon">Peak Icon</option>
+      </select>
+      <select id="carrierSelect" class="border border-slate-300 rounded-lg px-3 py-1.5 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500">
+        <option value="Flash Express">Flash Express</option>
+        <option value="Kerry Express">Kerry Express</option>
+        <option value="ไปรษณีย์ไทย (EMS)">ไปรษณีย์ไทย (EMS)</option>
+        <option value="J&T Express">J&T Express</option>
+      </select>
+    </div>
+
+    <div class="flex items-center gap-2">
+      <button onclick="window.print()" class="bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold px-4 py-2 rounded-lg shadow inline-flex items-center gap-1.5 transition">
+        🖨️ พิมพ์ใบส่งมอบ (A4)
+      </button>
+      <button id="btnConfirmHandover" onclick="confirmHandover()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold px-4 py-2 rounded-lg shadow inline-flex items-center gap-1.5 transition">
+        🚚 ยืนยันส่งมอบให้รถขนส่ง
+      </button>
+    </div>
+  </div>
+
+  <!-- แผ่นเอกสาร A4 สำหรับพิมพ์ -->
+  <div class="max-w-4xl mx-auto bg-white p-8 rounded-xl shadow-lg border border-slate-200 text-black">
+    
+    <!-- Header เอกสาร -->
+    <div class="border-b-2 border-black pb-4 mb-4 flex justify-between items-start">
+      <div>
+        <h1 class="display-font text-2xl font-black tracking-wide text-slate-900">ใบนำส่งพัสดุ / สรุปส่งมอบงาน (CARRIER HANDOVER SHEET)</h1>
+        <p class="text-xs text-gray-700 mt-1">
+          <b>ผู้ส่งมอบ:</b> <span id="docBrandName">BAENGPUN แบ่งปันชอป</span> (Pro Nexus Operations Hub)
+        </p>
+        <p class="text-xs text-gray-700">
+          <b>บริษัทขนส่งผู้รับมอบ:</b> <span id="docCarrierName" class="font-bold">Flash Express</span>
+        </p>
+      </div>
+      <div class="text-right text-xs space-y-1">
+        <div class="bg-slate-100 border border-slate-300 px-3 py-1 rounded font-mono font-bold text-sm">
+          MANIFEST #<span id="docManifestNo">MNF-20260915-01</span>
+        </div>
+        <p class="text-gray-600">วันที่: <span id="docPrintDate">-</span></p>
+        <p class="text-gray-600">เวลารอบส่ง: <span id="docPrintTime">-</span></p>
+      </div>
+    </div>
+
+    <!-- สรุปสถิติจำนวนกล่อง -->
+    <div class="grid grid-cols-3 gap-3 mb-4 text-center">
+      <div class="border border-slate-300 rounded-lg p-2 bg-slate-50">
+        <span class="text-[11px] text-gray-500 uppercase font-semibold">จำนวนพัสดุทั้งหมด</span>
+        <p id="docTotalCount" class="text-xl font-bold text-slate-900 mt-0.5">0 กล่อง</p>
+      </div>
+      <div class="border border-slate-300 rounded-lg p-2 bg-slate-50">
+        <span class="text-[11px] text-gray-500 uppercase font-semibold">ยอดเก็บเงินปลายทาง (COD)</span>
+        <p class="text-xl font-bold text-slate-900 mt-0.5">฿0.00</p>
+      </div>
+      <div class="border border-slate-300 rounded-lg p-2 bg-slate-50">
+        <span class="text-[11px] text-gray-500 uppercase font-semibold">ประเภทบริการ</span>
+        <p class="text-xl font-bold text-emerald-700 mt-0.5">Door-to-Door Pickup</p>
+      </div>
+    </div>
+
+    <!-- ตารางรายการพัสดุ -->
+    <table class="w-full text-left text-xs border border-slate-400 mb-6">
+      <thead class="bg-slate-100 border-b border-slate-400 font-bold uppercase text-[11px]">
+        <tr>
+          <th class="p-2 border-r border-slate-300 text-center w-10">ลำดับ</th>
+          <th class="p-2 border-r border-slate-300 w-36">รหัสออเดอร์</th>
+          <th class="p-2 border-r border-slate-300">ชื่อผู้รับ & เบอร์โทรศัพท์</th>
+          <th class="p-2 border-r border-slate-300">ปลายทาง (จังหวัด/รหัสไปรษณีย์)</th>
+          <th class="p-2 border-r border-slate-300 text-center w-32">บาร์โค้ดตรวจสอบ</th>
+          <th class="p-2 text-center w-16">เช็กรับ (✓)</th>
+        </tr>
+      </thead>
+      <tbody id="manifestTableBody" class="divide-y divide-slate-300"></tbody>
+    </table>
+
+    <!-- ส่วนลายมือชื่อยืนยันการรับ-ส่งมอบ (Sign-off Section) -->
+    <div class="grid grid-cols-2 gap-8 pt-4 border-t-2 border-black text-xs">
+      <!-- ฝั่งคลังสินค้า -->
+      <div class="border border-slate-300 rounded-xl p-4 text-center space-y-8 bg-slate-50/50">
+        <span class="font-bold block text-slate-800">ตัวแทนฝ่ายจัดส่ง / คลังสินค้า (ผู้ส่งมอบ)</span>
+        <div class="border-b border-slate-400 w-48 mx-auto"></div>
+        <div class="space-y-1 text-slate-600 text-[11px]">
+          <p>ลงชื่อ: (....................................................................)</p>
+          <p>วันที่: ......./......./............ เวลา: .................น.</p>
+        </div>
+      </div>
+
+      <!-- ฝั่งพนักงานขับรถขนส่ง -->
+      <div class="border border-slate-300 rounded-xl p-4 text-center space-y-8 bg-slate-50/50">
+        <span class="font-bold block text-slate-800">พนักงานขับรถเข้ารับพัสดุ (ผู้รับมอบ)</span>
+        <div class="border-b border-slate-400 w-48 mx-auto"></div>
+        <div class="space-y-1 text-slate-600 text-[11px]">
+          <p>ลงชื่อ: (....................................................................)</p>
+          <p>ทะเบียนรถ: ........................... เบอร์โทร: ...........................</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ข้อความกำกับท้ายแผ่น -->
+    <div class="mt-4 text-center text-[10px] text-gray-500">
+      * เอกสารนี้ใช้เป็นหลักฐานยืนยันการส่งมอบพัสดุระหว่างศูนย์กระจายสินค้าและบริษัทขนส่ง พนักงานขับรถได้ตรวจสอบความสมบูรณ์ของพัสดุครบถ้วนตามจำนวน
+    </div>
+
+  </div>
+
+  <script>
+    const API_BASE = window.location.origin.includes('localhost') 
+      ? 'http://localhost:8000' 
+      : 'https://pro-nexus-os-production.up.railway.app';
+
+    let handoverOrders = [];
+
+    const BRAND_NAMES = {
+      tp_extra: "BAENGPUN แบ่งปันชอป (TP Extra)",
+      pro_nexus: "Pro Nexus Logistics",
+      luck_kio: "Luck Kio Official",
+      peak_icon: "Peak Icon Shop"
+    };
+
+    document.getElementById('carrierSelect').addEventListener('change', (e) => {
+      document.getElementById('docCarrierName').innerText = e.target.value;
+    });
+
+    async function loadHandoverData() {
+      const token = sessionStorage.getItem('admin_passcode') || 'admin1234';
+      const company = document.getElementById('companySelect').value;
+
+      document.getElementById('docBrandName').innerText = BRAND_NAMES[company] || company.toUpperCase();
+      document.getElementById('docCarrierName').innerText = document.getElementById('carrierSelect').value;
+
+      const now = new Date();
+      document.getElementById('docPrintDate').innerText = now.toLocaleDateString('th-TH');
+      document.getElementById('docPrintTime').innerText = now.toLocaleTimeString('th-TH', {hour: '2-digit', minute:'2-digit'}) + ' น.';
+      document.getElementById('docManifestNo').innerText = `MNF-${now.toISOString().slice(0,10).replace(/-/g,'')}-${Math.floor(1000 + Math.random()*9000)}`;
+
+      try {
+        const res = await fetch(`${API_BASE}/api/v1/admin/orders/handover-list?company=${company}`, {
+          headers: { 'x-admin-key': token }
+        });
+        const data = await res.json();
+        if (data.status === 'success') {
+          handoverOrders = data.orders || [];
+          document.getElementById('docTotalCount').innerText = `${handoverOrders.length} กล่อง`;
+          renderManifestTable(handoverOrders);
+        }
+      } catch (err) {
+        console.error("Load handover error:", err);
+      }
+    }
+
+    function renderManifestTable(orders) {
+      const tbody = document.getElementById('manifestTableBody');
+      if (orders.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-gray-400 italic">ไม่มีพัสดุในสถานะพร้อมส่งมอบ (Packed / Paid)</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = orders.map((o, idx) => {
+        // สกัดจังหวัด หรือข้อความสั้นๆ จากที่อยู่
+        const addrSnippet = o.shipping_address ? o.shipping_address.slice(0, 35) + '...' : '-';
+        return `
+          <tr class="hover:bg-slate-50">
+            <td class="p-2 border-r border-slate-300 text-center font-bold text-gray-600">${idx + 1}</td>
+            <td class="p-2 border-r border-slate-300 font-mono font-bold text-slate-900">${o.order_no}</td>
+            <td class="p-2 border-r border-slate-300">
+              <span class="font-bold text-slate-800">${o.customer_name || 'ลูกค้าไม่ระบุชื่อ'}</span>
+              <span class="block text-[11px] font-mono text-gray-600">${o.customer_phone || '-'}</span>
+            </td>
+            <td class="p-2 border-r border-slate-300 text-[11px] text-gray-700 leading-tight" title="${o.shipping_address || ''}">
+              ${addrSnippet}
+            </td>
+            <td class="p-1 border-r border-slate-300 text-center">
+              <svg id="handoverBarcode_${idx}" class="mx-auto max-h-8"></svg>
+            </td>
+            <td class="p-2 text-center">
+              <div class="w-4 h-4 border border-slate-400 rounded-sm mx-auto"></div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+
+      // วาดบาร์โค้ดขนาดกะทัดรัด
+      orders.forEach((o, idx) => {
+        try {
+          JsBarcode(`#handoverBarcode_${idx}`, o.order_no, {
+            format: "CODE128",
+            width: 1.2,
+            height: 25,
+            displayValue: false,
+            margin: 0
+          });
+        } catch (err) {}
+      });
+    }
+
+    async function confirmHandover() {
+      if (handoverOrders.length === 0) {
+        alert("ไม่มีพัสดุให้ส่งมอบ");
+        return;
+      }
+
+      const carrier = document.getElementById('carrierSelect').value;
+      if (!confirm(`ยืนยันการส่งมอบพัสดุจำนวน ${handoverOrders.length} กล่อง ให้กับรถขนส่ง ${carrier}?\n(สถานะจะถูกเปลี่ยนเป็น 'shipping')`)) {
+        return;
+      }
+
+      const token = sessionStorage.getItem('admin_passcode') || 'admin1234';
+      const orderNos = handoverOrders.map(o => o.order_no);
+      const btn = document.getElementById('btnConfirmHandover');
+      btn.disabled = true;
+      btn.innerText = "กำลังประมวลผล...";
+
+      try {
+        const res = await fetch(`${API_BASE}/api/v1/admin/orders/handover-confirm`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-admin-key': token
+          },
+          body: JSON.stringify({
+            order_nos: orderNos,
+            carrier_name: carrier
+          })
+        });
+
+        const data = await res.json();
+        if (res.ok) {
+          alert(data.message);
+          loadHandoverData();
+        } else {
+          alert("เกิดข้อผิดพลาด: " + (data.detail || "ไม่สามารถยืนยันได้"));
+        }
+      } catch (err) {
+        alert("ไม่สามารถติดต่อเซิร์ฟเวอร์ได้");
+      } finally {
+        btn.disabled = false;
+        btn.innerText = "🚚 ยืนยันส่งมอบให้รถขนส่ง";
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', loadHandoverData);
+  </script>
+</body>
+</html>

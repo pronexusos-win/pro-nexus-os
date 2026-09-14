@@ -320,3 +320,61 @@ def scan_pack_order(payload: ScanPackRequest, admin_key: str = Depends(verify_ad
         "message": f"ตรวจเช็กและแพ็กออเดอร์ {order_no} สำเร็จ",
         "order": order
     }
+
+
+@router.get("/orders/handover-list")
+def get_handover_list(
+    company: str = Query(default="tp_extra"),
+    admin_key: str = Depends(verify_admin_key)
+):
+    query = """
+        SELECT order_no, customer_name, customer_phone, shipping_address, 
+               tracking_number, CAST(total_amount AS FLOAT) as total_amount, 
+               status, DATE_FORMAT(updated_at, '%d/%m/%Y %H:%i') AS packed_time
+        FROM orders
+        WHERE company_slug = %s AND status IN ('packed', 'paid')
+        ORDER BY id ASC;
+    """
+    with get_db_connection() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(query, (company,))
+            orders = cursor.fetchall()
+
+    return {
+        "status": "success",
+        "company_slug": company,
+        "total_parcels": len(orders),
+        "orders": orders
+    }
+
+class HandoverConfirmRequest(BaseModel):
+    order_nos: list[str]
+    carrier_name: Optional[str] = "FLASH_EXPRESS"
+    driver_name: Optional[str] = None
+
+@router.post("/orders/handover-confirm")
+def confirm_handover(
+    payload: HandoverConfirmRequest,
+    admin_key: str = Depends(verify_admin_key)
+):
+    if not payload.order_nos:
+        raise HTTPException(status_code=400, detail="ไม่พบรายการออเดอร์สำหรับส่งมอบ")
+
+    format_strings = ",".join(["%s"] * len(payload.order_nos))
+    update_sql = f"""
+        UPDATE orders
+        SET status = 'shipping', updated_at = NOW()
+        WHERE order_no IN ({format_strings});
+    """
+
+    with get_db_connection() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(update_sql, payload.order_nos)
+            affected = cursor.rowcount
+        conn.commit()
+
+    return {
+        "status": "success",
+        "message": f"ส่งมอบพัสดุให้ {payload.carrier_name} สำเร็จ {affected} กล่อง",
+        "affected_rows": affected
+    }
