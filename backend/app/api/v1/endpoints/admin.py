@@ -69,7 +69,7 @@ def get_dashboard_overview(company: str = Query(default="tp_extra"), x_admin_key
         WHERE company_slug = %s;
     """
     recent_orders_query = """
-        SELECT o.order_no, o.line_user_id, CAST(o.total_amount AS FLOAT) AS total_amount, o.status, 
+        SELECT o.order_no, o.line_user_id, o.customer_name, o.customer_phone, o.shipping_address, CAST(o.total_amount AS FLOAT) AS total_amount, o.status, 
                s.image_url AS slip_url, CAST(s.trans_amount AS FLOAT) AS slip_amount,
                DATE_FORMAT(o.created_at, '%d/%m/%Y %H:%i') AS created_at
         FROM orders o

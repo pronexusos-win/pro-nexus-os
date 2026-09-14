@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from typing import Optional, List
 from datetime import datetime
+from backend.app.api.v1.endpoints.admin import router as admin_router
 
 app = FastAPI(title="Pro Nexus OS Platform - Production", version="1.0.2")
 
@@ -288,4 +289,4 @@ def reset_company_data(req: ResetRequest):
         conn.rollback()
         raise HTTPException(status_code=500, detail=str(e))
     finally:
-        conn.close()
+        conn.close()app.include_router(admin_router)
