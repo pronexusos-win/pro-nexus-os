@@ -127,3 +127,39 @@ def update_order_status(order_no: str, payload: UpdateOrderStatusRequest, x_admi
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+class BatchStatusUpdateRequest(BaseModel):
+    order_nos: list[str]
+    status: str
+    tracking_prefix: Optional[str] = None
+
+@router.post("/orders/batch-status")
+def batch_update_order_status(
+    payload: BatchStatusUpdateRequest,
+    admin_key: str = Depends(verify_admin_key)
+):
+    if not payload.order_nos:
+        raise HTTPException(status_code=400, detail="No orders provided")
+
+    format_strings = ",".join(["%s"] * len(payload.order_nos))
+    update_sql = f"""
+        UPDATE orders
+        SET status = %s, updated_at = NOW()
+        WHERE order_no IN ({format_strings});
+    """
+    params = [payload.status] + payload.order_nos
+
+    try:
+        with get_db_connection() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute(update_sql, params)
+                affected = cursor.rowcount
+            conn.commit()
+        return {
+            "status": "success",
+            "message": f"Updated {affected} orders to {payload.status}",
+            "affected_rows": affected
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

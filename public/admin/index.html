@@ -10,7 +10,6 @@
   <style>
     body { font-family: 'Sarabun', sans-serif; }
 
-    /* CSS สำหรับการพิมพ์สติกเกอร์ความร้อน (ขนาด 100x150 mm / 4x6 นิ้ว) */
     @media print {
       body * {
         visibility: hidden;
@@ -49,7 +48,7 @@
   <!-- Toast แจ้งเตือน -->
   <div id="toast" class="fixed top-5 right-5 bg-slate-900 text-white text-xs px-4 py-2.5 rounded-xl shadow-lg z-50 transition-opacity duration-300 opacity-0 pointer-events-none flex items-center gap-2">
     <span id="toastIcon">📋</span>
-    <span id="toastMsg">คัดลอกที่อยู่สำเร็จแล้ว!</span>
+    <span id="toastMsg">แจ้งเตือน</span>
   </div>
 
   <!-- Modal ป้อนรหัสผ่าน Passcode -->
@@ -94,7 +93,7 @@
 
   <!-- Main Content -->
   <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 print:hidden">
-    <!-- Quick Stats Cards (กดการ์ดเพื่อสลับฟิลเตอร์ได้ด้วย) -->
+    <!-- Quick Stats Cards -->
     <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
       <div onclick="setStatusFilter('all')" class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm cursor-pointer hover:border-emerald-400 transition">
         <p class="text-xs font-medium text-slate-400 uppercase">ยอดขายรวม</p>
@@ -116,16 +115,22 @@
 
     <!-- Table Section -->
     <section class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-      <!-- Toolbar ส่วนบน: หัวข้อ + ปุ่มแอ็กชัน -->
+      <!-- Toolbar ส่วนบน -->
       <div class="p-5 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 class="text-lg font-bold text-slate-800">รายการคำสั่งซื้อ</h2>
           <p class="text-xs text-slate-400">ตรวจสอบสลิป ที่อยู่จัดส่ง พิมพ์ใบปะหน้า และจัดการสถานะพัสดุ</p>
         </div>
         <div class="flex flex-wrap items-center gap-2">
-          <button id="batchPrintBtn" onclick="printSelectedLabels()" class="hidden bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-sm font-semibold shadow-sm inline-flex items-center gap-1.5 transition">
-            🖨️ พิมพ์ที่เลือก (<span id="selectedCount">0</span>)
-          </button>
+          <!-- Batch Actions Group -->
+          <div id="batchActionGroup" class="hidden items-center gap-2">
+            <button onclick="batchUpdateStatus('shipping')" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-lg text-sm font-semibold shadow-sm inline-flex items-center gap-1.5 transition">
+              📦 จัดส่งที่เลือก (<span class="selectedCountText">0</span>)
+            </button>
+            <button onclick="printSelectedLabels()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-sm font-semibold shadow-sm inline-flex items-center gap-1.5 transition">
+              🖨️ พิมพ์ที่เลือก (<span class="selectedCountText">0</span>)
+            </button>
+          </div>
           <input type="text" id="searchInput" onkeyup="applyFilterAndSearch()" placeholder="ค้นหารหัส, ชื่อ, เบอร์..." class="border border-slate-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 w-full sm:w-56">
           <button onclick="exportToCSV()" class="bg-slate-800 hover:bg-slate-900 text-white px-3 py-1.5 rounded-lg text-sm font-semibold shadow-sm inline-flex items-center gap-1.5 transition">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
@@ -281,8 +286,6 @@
 
     function setStatusFilter(status) {
       currentStatusFilter = status;
-
-      // ปรับสไตล์ปุ่มแท็บที่เลือก
       document.querySelectorAll('.filter-btn').forEach(btn => {
         btn.className = 'filter-btn px-3 py-1.5 rounded-lg font-semibold bg-white text-slate-600 border border-slate-200 hover:bg-slate-100 transition';
       });
@@ -290,24 +293,19 @@
       if (activeBtn) {
         activeBtn.className = 'filter-btn px-3 py-1.5 rounded-lg font-semibold bg-emerald-600 text-white shadow-xs transition';
       }
-
       applyFilterAndSearch();
     }
 
     function applyFilterAndSearch() {
       const q = document.getElementById('searchInput').value.toLowerCase();
-      
       currentDisplayedOrders = allOrders.filter(o => {
         const matchesStatus = (currentStatusFilter === 'all') || (o.status === currentStatusFilter);
         const matchesQuery = !q || 
           (o.order_no && o.order_no.toLowerCase().includes(q)) || 
           (o.customer_name && o.customer_name.toLowerCase().includes(q)) ||
           (o.customer_phone && o.customer_phone.toLowerCase().includes(q));
-        
         return matchesStatus && matchesQuery;
       });
-
-      // รีเซ็ตการเลือกทั้งหมดถ้าเปลี่ยนมุมมอง
       document.getElementById('selectAllCheckbox').checked = false;
       renderOrdersTable(currentDisplayedOrders);
     }
@@ -337,12 +335,50 @@
 
     function updateBatchUI() {
       const count = selectedOrderNos.size;
-      const btn = document.getElementById('batchPrintBtn');
-      document.getElementById('selectedCount').innerText = count;
+      const group = document.getElementById('batchActionGroup');
+      document.querySelectorAll('.selectedCountText').forEach(el => el.innerText = count);
       if (count > 0) {
-        btn.classList.remove('hidden');
+        group.classList.remove('hidden');
+        group.classList.add('flex');
       } else {
-        btn.classList.add('hidden');
+        group.classList.add('hidden');
+        group.classList.remove('flex');
+      }
+    }
+
+    async function batchUpdateStatus(newStatus) {
+      const token = sessionStorage.getItem('admin_passcode');
+      const orderList = Array.from(selectedOrderNos);
+      if (orderList.length === 0) return;
+
+      if (!confirm(`ยืนยันการเปลี่ยนสถานะ ${orderList.length} รายการที่เลือก เป็น "${newStatus}" หรือไม่?`)) {
+        return;
+      }
+
+      try {
+        const res = await fetch(`${API_BASE}/api/v1/admin/orders/batch-status`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-admin-key': token
+          },
+          body: JSON.stringify({
+            order_nos: orderList,
+            status: newStatus
+          })
+        });
+
+        const data = await res.json();
+        if (res.ok) {
+          showToast(`อัปเดตสถานะ ${data.affected_rows} รายการสำเร็จ!`, "📦");
+          selectedOrderNos.clear();
+          updateBatchUI();
+          loadDashboardData();
+        } else {
+          showToast(data.detail || "เกิดข้อผิดพลาดในการอัปเดต", "❌");
+        }
+      } catch (err) {
+        showToast("ไม่สามารถติดต่อเซิร์ฟเวอร์ได้", "❌");
       }
     }
 
@@ -352,7 +388,6 @@
         showToast("⚠️ ไม่พบข้อมูลที่อยู่จัดส่ง", "⚠️");
         return;
       }
-
       const copyText = `ผู้รับ: ${order.customer_name || '-'}\nเบอร์โทร: ${order.customer_phone || '-'}\nที่อยู่จัดส่ง: ${order.shipping_address || '-'}`;
       navigator.clipboard.writeText(copyText).then(() => {
         showToast(`คัดลอกที่อยู่ ${orderNo} แล้ว!`, "📋");
@@ -426,16 +461,13 @@
     function printSelectedLabels() {
       const ordersToPrint = allOrders.filter(o => selectedOrderNos.has(o.order_no));
       const validOrders = ordersToPrint.filter(o => o.customer_name || o.shipping_address);
-
       if (validOrders.length === 0) {
         showToast("ออเดอร์ที่เลือกไม่มีข้อมูลที่อยู่จัดส่ง", "⚠️");
         return;
       }
-
       if (validOrders.length < ordersToPrint.length) {
         alert(`มีบางออเดอร์ (${ordersToPrint.length - validOrders.length} รายการ) ถูกข้ามเนื่องจากไม่มีข้อมูลที่อยู่จัดส่ง`);
       }
-
       renderAndPrintLabels(validOrders);
     }
 
@@ -455,7 +487,7 @@
             displayValue: false
           });
         } catch (err) {
-          console.error("Barcode generation error:", err);
+          console.error("Barcode error:", err);
         }
       });
 
@@ -470,10 +502,8 @@
         showToast("ไม่มีข้อมูลออเดอร์สำหรับ Export", "⚠️");
         return;
       }
-
       const company = document.getElementById('companySelect').value;
       const headers = ["รหัสออเดอร์", "LINE User ID", "ชื่อผู้รับ", "เบอร์โทรศัพท์", "ที่อยู่จัดส่ง", "ยอดชำระ", "สถานะ", "ยอดเงินในสลิป", "วันที่ทำรายการ"];
-      
       const rows = ordersToExport.map(o => [
         `"${o.order_no || ''}"`,
         `"${o.line_user_id || ''}"`,
@@ -495,7 +525,6 @@
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-
       showToast("ดาวน์โหลดไฟล์ CSV สำเร็จ", "📥");
     }
 
@@ -573,14 +602,12 @@
     async function changeStatus(orderNo, newStatus) {
       const token = sessionStorage.getItem('admin_passcode');
       let trackingNumber = null;
-
       if (newStatus === "shipping") {
         trackingNumber = prompt(`ระบุเลขพัสดุสำหรับออเดอร์ ${orderNo} (เว้นว่างได้):`, "");
         if (trackingNumber === null) return;
       } else {
         if (!confirm(`ยืนยันการเปลี่ยนสถานะเป็น ${newStatus}?`)) return;
       }
-
       await fetch(`${API_BASE}/api/v1/admin/orders/${orderNo}/status`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', 'x-admin-key': token },
