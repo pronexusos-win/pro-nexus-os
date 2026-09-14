@@ -5,8 +5,37 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Admin Portal - Multi-tenant Commerce</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <style>body { font-family: 'Sarabun', sans-serif; }</style>
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&family=Prompt:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Sarabun', sans-serif; }
+
+    /* CSS สำหรับการพิมพ์สติกเกอร์ความร้อน (ขนาด 100x150 mm / 4x6 นิ้ว) */
+    @media print {
+      body * {
+        visibility: hidden;
+      }
+      #printArea, #printArea * {
+        visibility: visible;
+      }
+      #printArea {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100mm;
+        min-height: 145mm;
+        margin: 0;
+        padding: 6mm;
+        background: #fff;
+        color: #000;
+        font-family: 'Prompt', 'Sarabun', sans-serif;
+      }
+      @page {
+        size: 100mm 150mm;
+        margin: 0;
+      }
+    }
+  </style>
 </head>
 <body class="bg-slate-100 min-h-screen text-slate-800">
 
@@ -30,8 +59,62 @@
     </div>
   </div>
 
+  <!-- ส่วนแสดงผลสำหรับพิมพ์ใบปะหน้าพัสดุ (Thermal Shipping Label) -->
+  <div id="printArea" class="hidden print:block border-2 border-dashed border-slate-400 rounded-lg">
+    <!-- Header ผู้ส่ง -->
+    <div class="border-b-2 border-black pb-2 mb-2 flex justify-between items-start">
+      <div>
+        <span id="labelBrandName" class="text-base font-bold tracking-wider">BAENGPUN แบ่งปันชอป</span>
+        <p class="text-[10px] text-gray-700">ผู้ส่ง: คลังสินค้าและศูนย์กระจายสินค้า TP Extra System</p>
+        <p class="text-[10px] text-gray-700">เบอร์ติดต่อศูนย์รับส่ง: 02-XXX-XXXX</p>
+      </div>
+      <div class="text-right">
+        <span class="border-2 border-black px-2 py-0.5 font-bold text-xs">STANDARD</span>
+      </div>
+    </div>
+
+    <!-- บาร์โค้ดคำสั่งซื้อ -->
+    <div class="flex flex-col items-center justify-center my-2 border-b-2 border-black pb-2">
+      <svg id="barcodeSvg" class="max-h-14"></svg>
+      <span id="labelOrderNo" class="font-mono text-xs font-bold tracking-widest mt-0.5">-</span>
+    </div>
+
+    <!-- ข้อมูลผู้รับพัสดุ -->
+    <div class="border-2 border-black rounded p-2 mb-2 bg-gray-50/20">
+      <div class="flex items-center justify-between border-b border-gray-400 pb-1 mb-1">
+        <span class="text-xs font-bold uppercase tracking-wide">📍 ข้อมูลผู้รับ (RECIPIENT)</span>
+        <span id="labelPhone" class="font-bold text-sm text-black">-</span>
+      </div>
+      <div class="space-y-1">
+        <p id="labelName" class="text-sm font-bold text-black">-</p>
+        <p id="labelAddress" class="text-xs text-black leading-relaxed whitespace-pre-wrap">-</p>
+      </div>
+    </div>
+
+    <!-- รายละเอียดสิ่งของและยอดเงิน -->
+    <div class="border border-black rounded p-2 text-xs space-y-1">
+      <div class="flex justify-between items-center text-[11px]">
+        <span>ยอดชำระสุทธิ:</span>
+        <span id="labelAmount" class="font-bold">฿0.00</span>
+      </div>
+      <div class="flex justify-between items-center text-[11px]">
+        <span>สถานะการชำระ:</span>
+        <span class="font-bold">ชำระเงินเรียบร้อยแล้ว (PAID)</span>
+      </div>
+      <div class="flex justify-between items-center text-[10px] text-gray-600 border-t border-gray-300 pt-1 mt-1">
+        <span>วันที่พิมพ์เอกสาร:</span>
+        <span id="labelPrintDate">-</span>
+      </div>
+    </div>
+
+    <!-- คำเตือนท้ายกล่อง -->
+    <div class="text-center mt-3 text-[9px] text-gray-600">
+      *** กรุณาตรวจสอบพัสดุและถ่ายคลิปวิดีโอก่อนเปิดกล่องทุกครั้ง ***
+    </div>
+  </div>
+
   <!-- Header -->
-  <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm print:hidden">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
       <div class="flex items-center gap-3">
         <div class="w-9 h-9 rounded-lg bg-emerald-600 flex items-center justify-center text-white font-bold text-lg shadow-sm">P</div>
@@ -54,7 +137,7 @@
   </header>
 
   <!-- Main Content -->
-  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 print:hidden">
     <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
       <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
         <p class="text-xs font-medium text-slate-400 uppercase">ยอดขายรวม</p>
@@ -79,13 +162,13 @@
       <div class="p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h2 class="text-lg font-bold text-slate-800">รายการคำสั่งซื้อ</h2>
-          <p class="text-xs text-slate-400">ตรวจสอบสลิป ที่อยู่จัดส่ง และสถานะพัสดุ</p>
+          <p class="text-xs text-slate-400">ตรวจสอบสลิป ที่อยู่จัดส่ง พิมพ์ใบปะหน้า และอัปเดตสถานะ</p>
         </div>
         <div class="flex flex-wrap items-center gap-2">
           <input type="text" id="searchInput" onkeyup="filterTable()" placeholder="ค้นหารหัส, ชื่อ, เบอร์..." class="border border-slate-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 w-full sm:w-56">
-          <button onclick="exportToCSV()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-sm font-semibold shadow-sm inline-flex items-center gap-1.5 transition">
+          <button onclick="exportToCSV()" class="bg-slate-800 hover:bg-slate-900 text-white px-3 py-1.5 rounded-lg text-sm font-semibold shadow-sm inline-flex items-center gap-1.5 transition">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-            Export CSV/Excel
+            Export CSV
           </button>
         </div>
       </div>
@@ -114,6 +197,13 @@
       : 'https://pro-nexus-os-production.up.railway.app';
 
     let allOrders = [];
+
+    const BRAND_LABELS = {
+      tp_extra: "BAENGPUN แบ่งปันชอป (TP Extra)",
+      pro_nexus: "Pro Nexus Logistics",
+      luck_kio: "Luck Kio Official",
+      peak_icon: "Peak Icon Shop"
+    };
 
     function showToast(msg, icon = "📋") {
       const toast = document.getElementById('toast');
@@ -203,6 +293,36 @@
       });
     }
 
+    function printShippingLabel(orderNo) {
+      const order = allOrders.find(o => o.order_no === orderNo);
+      if (!order) return;
+
+      if (!order.customer_name && !order.shipping_address) {
+        showToast("ไม่สามารถพิมพ์ได้ เนื่องจากไม่มีที่อยู่จัดส่ง", "⚠️");
+        return;
+      }
+
+      const company = document.getElementById('companySelect').value;
+      document.getElementById('labelBrandName').innerText = BRAND_LABELS[company] || "PRO NEXUS OS";
+      document.getElementById('labelOrderNo').innerText = order.order_no;
+      document.getElementById('labelName').innerText = order.customer_name || 'ลูกค้าไม่ระบุชื่อ';
+      document.getElementById('labelPhone').innerText = order.customer_phone || '-';
+      document.getElementById('labelAddress').innerText = order.shipping_address || '-';
+      document.getElementById('labelAmount').innerText = `฿${parseFloat(order.total_amount).toLocaleString(undefined, {minimumFractionDigits: 2})}`;
+      document.getElementById('labelPrintDate').innerText = new Date().toLocaleString('th-TH');
+
+      // สร้างบาร์โค้ด Code 128
+      JsBarcode("#barcodeSvg", order.order_no, {
+        format: "CODE128",
+        width: 1.8,
+        height: 45,
+        displayValue: false
+      });
+
+      // สั่งเปิดหน้าต่าง Print ของเบราว์เซอร์
+      window.print();
+    }
+
     function exportToCSV() {
       if (!allOrders || allOrders.length === 0) {
         showToast("ไม่มีข้อมูลออเดอร์สำหรับ Export", "⚠️");
@@ -224,21 +344,17 @@
         `"${o.created_at || ''}"`
       ]);
 
-      // ใส่ \uFEFF (UTF-8 BOM) เพื่อให้ Microsoft Excel เปิดภาษาไทยได้โดยไม่เป็นภาษาต่างดาว
       const csvContent = "\uFEFF" + [headers.join(","), ...rows.map(r => r.join(","))].join("\r\n");
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
-      
-      const now = new Date();
-      const dateStr = now.toISOString().slice(0, 10).replace(/-/g, '');
       const link = document.createElement("a");
       link.setAttribute("href", url);
-      link.setAttribute("download", `orders_${company}_${dateStr}.csv`);
+      link.setAttribute("download", `orders_${company}_${new Date().toISOString().slice(0, 10)}.csv`);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
 
-      showToast(`ดาวน์โหลดไฟล์ orders_${company}_${dateStr}.csv สำเร็จ`, "📥");
+      showToast("ดาวน์โหลดไฟล์ CSV สำเร็จ", "📥");
     }
 
     function renderOrdersTable(orders) {
@@ -260,9 +376,14 @@
                     <span class="text-xs text-slate-500 font-mono">${o.customer_phone || ''}</span>
                   </div>
                   <p class="text-xs text-slate-500 line-clamp-2 leading-relaxed" title="${o.shipping_address}">${o.shipping_address || '-'}</p>
-                  <button onclick="copyAddress('${o.order_no}')" class="text-[11px] bg-slate-100 hover:bg-emerald-50 text-slate-600 hover:text-emerald-700 px-2 py-0.5 rounded border border-slate-200 hover:border-emerald-200 font-medium inline-flex items-center gap-1 transition">
-                    📋 คัดลอกที่อยู่
-                  </button>
+                  <div class="flex items-center gap-1.5 pt-1">
+                    <button onclick="copyAddress('${o.order_no}')" class="text-[11px] bg-slate-100 hover:bg-emerald-50 text-slate-600 hover:text-emerald-700 px-2 py-0.5 rounded border border-slate-200 hover:border-emerald-200 font-medium inline-flex items-center gap-1 transition">
+                      📋 คัดลอก
+                    </button>
+                    <button onclick="printShippingLabel('${o.order_no}')" class="text-[11px] bg-emerald-50 hover:bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded border border-emerald-200 font-semibold inline-flex items-center gap-1 transition shadow-xs">
+                      🖨️ พิมพ์ใบปะหน้า
+                    </button>
+                  </div>
                 </div>
               ` : `
                 <span class="text-xs text-slate-400 italic">ไม่ได้ระบุที่อยู่</span>
