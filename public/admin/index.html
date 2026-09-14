@@ -10,12 +10,18 @@
 </head>
 <body class="bg-slate-100 min-h-screen text-slate-800">
 
+  <!-- Toast แจ้งเตือนการคัดลอก -->
+  <div id="toast" class="fixed top-5 right-5 bg-slate-900 text-white text-xs px-4 py-2.5 rounded-xl shadow-lg z-50 transition-opacity duration-300 opacity-0 pointer-events-none flex items-center gap-2">
+    <span>📋</span>
+    <span id="toastMsg">คัดลอกที่อยู่สำเร็จแล้ว!</span>
+  </div>
+
   <!-- Modal ป้อนรหัสผ่าน Passcode -->
   <div id="loginModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6 text-center">
       <div class="w-12 h-12 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto text-xl font-bold mb-3">🔒</div>
       <h3 class="text-lg font-bold text-slate-900">ผู้ดูแลระบบ</h3>
-      <p class="text-xs text-slate-400 mt-1 mb-4">กรุณาป้อนรหัสผ่าน Passcode เพื่อเข้าถึงข้อมูลคำสั่งซื้อ</p>
+      <p class="text-xs text-slate-400 mt-1 mb-4">กรุณาป้อนรหัสผ่าน Passcode เพื่อเข้าถึงข้อมูล</p>
       <form onsubmit="handleLogin(event)" class="space-y-3">
         <input type="password" id="passcodeInput" placeholder="ป้อนรหัสผ่าน..." class="w-full text-center tracking-widest text-lg px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500" required autofocus>
         <p id="loginError" class="text-xs text-rose-500 hidden">รหัสผ่านไม่ถูกต้อง</p>
@@ -70,20 +76,23 @@
 
     <!-- Table -->
     <section class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-      <div class="p-5 border-b border-slate-100 flex justify-between items-center">
-        <h2 class="text-lg font-bold text-slate-800">รายการคำสั่งซื้อ</h2>
-        <input type="text" id="searchInput" onkeyup="filterTable()" placeholder="ค้นหารหัสคำสั่งซื้อ..." class="border border-slate-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none">
+      <div class="p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h2 class="text-lg font-bold text-slate-800">รายการคำสั่งซื้อ</h2>
+          <p class="text-xs text-slate-400">ตรวจสอบสลิป ที่อยู่จัดส่ง และสถานะพัสดุ</p>
+        </div>
+        <input type="text" id="searchInput" onkeyup="filterTable()" placeholder="ค้นหารหัส, ชื่อ, หรือเบอร์โทร..." class="border border-slate-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 w-full sm:w-64">
       </div>
       <div class="overflow-x-auto">
         <table class="w-full text-left text-sm">
           <thead class="bg-slate-50 text-slate-500 font-semibold border-b border-slate-100 text-xs uppercase">
             <tr>
               <th class="p-4">รหัสออเดอร์</th>
-              <th class="p-4">LINE User ID</th>
+              <th class="p-4">ผู้รับ & ที่อยู่จัดส่ง</th>
               <th class="p-4">ยอดชำระ</th>
               <th class="p-4">สถานะ</th>
               <th class="p-4">สลิปโอนเงิน</th>
-              <th class="p-4">วันที่</th>
+              <th class="p-4">วันที่ทำรายการ</th>
               <th class="p-4 text-center">การจัดการ</th>
             </tr>
           </thead>
@@ -99,6 +108,15 @@
       : 'https://pro-nexus-os-production.up.railway.app';
 
     let allOrders = [];
+
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      document.getElementById('toastMsg').innerText = msg;
+      toast.classList.remove('opacity-0', 'pointer-events-none');
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'pointer-events-none');
+      }, 2000);
+    }
 
     function checkAuth() {
       const token = sessionStorage.getItem('admin_passcode');
@@ -163,41 +181,109 @@
       }
     }
 
+    function copyAddress(orderNo) {
+      const order = allOrders.find(o => o.order_no === orderNo);
+      if (!order || (!order.customer_name && !order.shipping_address)) {
+        showToast("⚠️ ไม่พบข้อมูลที่อยู่จัดส่ง");
+        return;
+      }
+
+      const copyText = `ผู้รับ: ${order.customer_name || '-'}\nเบอร์โทร: ${order.customer_phone || '-'}\nที่อยู่จัดส่ง: ${order.shipping_address || '-'}`;
+      navigator.clipboard.writeText(copyText).then(() => {
+        showToast(`📋 คัดลอกที่อยู่ ${orderNo} แล้ว!`);
+      }).catch(() => {
+        showToast("❌ คัดลอกไม่สำเร็จ");
+      });
+    }
+
     function renderOrdersTable(orders) {
       const tbody = document.getElementById('ordersBody');
       if (orders.length === 0) {
         tbody.innerHTML = `<tr><td colspan="7" class="text-center p-8 text-slate-400">ไม่พบคำสั่งซื้อ</td></tr>`;
         return;
       }
-      tbody.innerHTML = orders.map(o => `
-        <tr class="hover:bg-slate-50">
-          <td class="p-4 font-mono font-bold">${o.order_no}</td>
-          <td class="p-4 text-xs text-slate-500 font-mono">${o.line_user_id}</td>
-          <td class="p-4 font-bold">฿${parseFloat(o.total_amount).toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
-          <td class="p-4"><span class="px-2 py-0.5 rounded-full text-xs font-semibold ${o.status === 'paid' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}">${o.status}</span></td>
-          <td class="p-4 text-xs">${o.slip_amount ? `ตรวจแล้ว (฿${o.slip_amount})` : '-'}</td>
-          <td class="p-4 text-xs text-slate-400">${o.created_at}</td>
-          <td class="p-4 text-center">
-            ${o.status === 'paid' ? `<button onclick="changeStatus('${o.order_no}', 'shipping')" class="bg-indigo-50 text-indigo-600 px-2.5 py-1 rounded text-xs font-semibold">จัดส่ง</button>` : ''}
-            ${o.status === 'shipping' ? `<button onclick="changeStatus('${o.order_no}', 'completed')" class="bg-emerald-50 text-emerald-600 px-2.5 py-1 rounded text-xs font-semibold">จบงาน</button>` : ''}
-          </td>
-        </tr>
-      `).join('');
+      tbody.innerHTML = orders.map(o => {
+        const hasAddress = o.customer_name || o.shipping_address;
+        return `
+          <tr class="hover:bg-slate-50 transition">
+            <td class="p-4 font-mono font-bold text-slate-800">${o.order_no}</td>
+            <td class="p-4 max-w-xs">
+              ${hasAddress ? `
+                <div class="space-y-1">
+                  <div class="flex items-center gap-2">
+                    <span class="font-semibold text-slate-800 text-xs">${o.customer_name || '-'}</span>
+                    <span class="text-xs text-slate-500 font-mono">${o.customer_phone || ''}</span>
+                  </div>
+                  <p class="text-xs text-slate-500 line-clamp-2 leading-relaxed" title="${o.shipping_address}">${o.shipping_address || '-'}</p>
+                  <button onclick="copyAddress('${o.order_no}')" class="text-[11px] bg-slate-100 hover:bg-emerald-50 text-slate-600 hover:text-emerald-700 px-2 py-0.5 rounded border border-slate-200 hover:border-emerald-200 font-medium inline-flex items-center gap-1 transition">
+                    📋 คัดลอกที่อยู่
+                  </button>
+                </div>
+              ` : `
+                <span class="text-xs text-slate-400 italic">ไม่ได้ระบุที่อยู่</span>
+              `}
+            </td>
+            <td class="p-4 font-bold text-slate-900">฿${parseFloat(o.total_amount).toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+            <td class="p-4">
+              <span class="px-2.5 py-1 rounded-full text-xs font-semibold ${
+                o.status === 'paid' ? 'bg-emerald-100 text-emerald-800' :
+                o.status === 'shipping' ? 'bg-indigo-100 text-indigo-800' :
+                o.status === 'completed' ? 'bg-slate-100 text-slate-700' :
+                o.status === 'cancelled' ? 'bg-rose-100 text-rose-700' : 'bg-amber-100 text-amber-800'
+              }">${o.status}</span>
+            </td>
+            <td class="p-4 text-xs">
+              ${o.slip_url && !o.slip_url.includes('stored_') 
+                ? `<a href="${o.slip_url}" target="_blank" class="text-emerald-600 hover:underline font-medium inline-flex items-center gap-1">ดูสลิป (${o.slip_amount || '-'})</a>`
+                : (o.slip_amount ? `<span class="text-slate-500">ตรวจแล้ว (฿${o.slip_amount})</span>` : `<span class="text-slate-300">-</span>`)
+              }
+            </td>
+            <td class="p-4 text-xs text-slate-400 whitespace-nowrap">${o.created_at}</td>
+            <td class="p-4 text-center">
+              <div class="inline-flex items-center gap-1.5">
+                ${o.status === 'paid' ? `
+                  <button onclick="changeStatus('${o.order_no}', 'shipping')" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-600 px-2.5 py-1 rounded text-xs font-semibold transition">
+                    จัดส่ง
+                  </button>
+                ` : ''}
+                ${o.status === 'shipping' ? `
+                  <button onclick="changeStatus('${o.order_no}', 'completed')" class="bg-emerald-50 hover:bg-emerald-100 text-emerald-600 px-2.5 py-1 rounded text-xs font-semibold transition">
+                    จบงาน
+                  </button>
+                ` : ''}
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
     }
 
     async function changeStatus(orderNo, newStatus) {
       const token = sessionStorage.getItem('admin_passcode');
+      let trackingNumber = null;
+
+      if (newStatus === "shipping") {
+        trackingNumber = prompt(`ระบุเลขพัสดุสำหรับออเดอร์ ${orderNo} (เว้นว่างได้):`, "");
+        if (trackingNumber === null) return;
+      } else {
+        if (!confirm(`ยืนยันการเปลี่ยนสถานะเป็น ${newStatus}?`)) return;
+      }
+
       await fetch(`${API_BASE}/api/v1/admin/orders/${orderNo}/status`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', 'x-admin-key': token },
-        body: JSON.stringify({ status: newStatus })
+        body: JSON.stringify({ status: newStatus, tracking_number: trackingNumber || undefined })
       });
       loadDashboardData();
     }
 
     function filterTable() {
       const q = document.getElementById('searchInput').value.toLowerCase();
-      renderOrdersTable(allOrders.filter(o => o.order_no.toLowerCase().includes(q) || o.line_user_id.toLowerCase().includes(q)));
+      renderOrdersTable(allOrders.filter(o => 
+        (o.order_no && o.order_no.toLowerCase().includes(q)) || 
+        (o.customer_name && o.customer_name.toLowerCase().includes(q)) ||
+        (o.customer_phone && o.customer_phone.toLowerCase().includes(q))
+      ));
     }
 
     window.addEventListener('DOMContentLoaded', checkAuth);
