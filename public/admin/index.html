@@ -15,20 +15,27 @@
       body * {
         visibility: hidden;
       }
-      #printArea, #printArea * {
+      #printContainer, #printContainer * {
         visibility: visible;
       }
-      #printArea {
+      #printContainer {
         position: absolute;
         left: 0;
         top: 0;
         width: 100mm;
-        min-height: 145mm;
         margin: 0;
-        padding: 6mm;
+        padding: 0;
         background: #fff;
         color: #000;
         font-family: 'Prompt', 'Sarabun', sans-serif;
+      }
+      .label-page {
+        width: 100mm;
+        height: 145mm;
+        padding: 6mm;
+        page-break-after: always;
+        break-after: page;
+        box-sizing: border-box;
       }
       @page {
         size: 100mm 150mm;
@@ -59,59 +66,8 @@
     </div>
   </div>
 
-  <!-- ส่วนแสดงผลสำหรับพิมพ์ใบปะหน้าพัสดุ (Thermal Shipping Label) -->
-  <div id="printArea" class="hidden print:block border-2 border-dashed border-slate-400 rounded-lg">
-    <!-- Header ผู้ส่ง -->
-    <div class="border-b-2 border-black pb-2 mb-2 flex justify-between items-start">
-      <div>
-        <span id="labelBrandName" class="text-base font-bold tracking-wider">BAENGPUN แบ่งปันชอป</span>
-        <p class="text-[10px] text-gray-700">ผู้ส่ง: คลังสินค้าและศูนย์กระจายสินค้า TP Extra System</p>
-        <p class="text-[10px] text-gray-700">เบอร์ติดต่อศูนย์รับส่ง: 02-XXX-XXXX</p>
-      </div>
-      <div class="text-right">
-        <span class="border-2 border-black px-2 py-0.5 font-bold text-xs">STANDARD</span>
-      </div>
-    </div>
-
-    <!-- บาร์โค้ดคำสั่งซื้อ -->
-    <div class="flex flex-col items-center justify-center my-2 border-b-2 border-black pb-2">
-      <svg id="barcodeSvg" class="max-h-14"></svg>
-      <span id="labelOrderNo" class="font-mono text-xs font-bold tracking-widest mt-0.5">-</span>
-    </div>
-
-    <!-- ข้อมูลผู้รับพัสดุ -->
-    <div class="border-2 border-black rounded p-2 mb-2 bg-gray-50/20">
-      <div class="flex items-center justify-between border-b border-gray-400 pb-1 mb-1">
-        <span class="text-xs font-bold uppercase tracking-wide">📍 ข้อมูลผู้รับ (RECIPIENT)</span>
-        <span id="labelPhone" class="font-bold text-sm text-black">-</span>
-      </div>
-      <div class="space-y-1">
-        <p id="labelName" class="text-sm font-bold text-black">-</p>
-        <p id="labelAddress" class="text-xs text-black leading-relaxed whitespace-pre-wrap">-</p>
-      </div>
-    </div>
-
-    <!-- รายละเอียดสิ่งของและยอดเงิน -->
-    <div class="border border-black rounded p-2 text-xs space-y-1">
-      <div class="flex justify-between items-center text-[11px]">
-        <span>ยอดชำระสุทธิ:</span>
-        <span id="labelAmount" class="font-bold">฿0.00</span>
-      </div>
-      <div class="flex justify-between items-center text-[11px]">
-        <span>สถานะการชำระ:</span>
-        <span class="font-bold">ชำระเงินเรียบร้อยแล้ว (PAID)</span>
-      </div>
-      <div class="flex justify-between items-center text-[10px] text-gray-600 border-t border-gray-300 pt-1 mt-1">
-        <span>วันที่พิมพ์เอกสาร:</span>
-        <span id="labelPrintDate">-</span>
-      </div>
-    </div>
-
-    <!-- คำเตือนท้ายกล่อง -->
-    <div class="text-center mt-3 text-[9px] text-gray-600">
-      *** กรุณาตรวจสอบพัสดุและถ่ายคลิปวิดีโอก่อนเปิดกล่องทุกครั้ง ***
-    </div>
-  </div>
+  <!-- จุดสำหรับเรนเดอร์ใบปะหน้าพัสดุ (เดี่ยว / หลายใบพร้อมกัน) -->
+  <div id="printContainer" class="hidden print:block"></div>
 
   <!-- Header -->
   <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm print:hidden">
@@ -165,6 +121,10 @@
           <p class="text-xs text-slate-400">ตรวจสอบสลิป ที่อยู่จัดส่ง พิมพ์ใบปะหน้า และอัปเดตสถานะ</p>
         </div>
         <div class="flex flex-wrap items-center gap-2">
+          <!-- ปุ่ม Batch Print -->
+          <button id="batchPrintBtn" onclick="printSelectedLabels()" class="hidden bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-sm font-semibold shadow-sm inline-flex items-center gap-1.5 transition animate-pulse">
+            🖨️ พิมพ์ที่เลือก (<span id="selectedCount">0</span>)
+          </button>
           <input type="text" id="searchInput" onkeyup="filterTable()" placeholder="ค้นหารหัส, ชื่อ, เบอร์..." class="border border-slate-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 w-full sm:w-56">
           <button onclick="exportToCSV()" class="bg-slate-800 hover:bg-slate-900 text-white px-3 py-1.5 rounded-lg text-sm font-semibold shadow-sm inline-flex items-center gap-1.5 transition">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
@@ -176,6 +136,9 @@
         <table class="w-full text-left text-sm">
           <thead class="bg-slate-50 text-slate-500 font-semibold border-b border-slate-100 text-xs uppercase">
             <tr>
+              <th class="p-4 w-10 text-center">
+                <input type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAll(this)" class="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer">
+              </th>
               <th class="p-4">รหัสออเดอร์</th>
               <th class="p-4">ผู้รับ & ที่อยู่จัดส่ง</th>
               <th class="p-4">ยอดชำระ</th>
@@ -197,6 +160,8 @@
       : 'https://pro-nexus-os-production.up.railway.app';
 
     let allOrders = [];
+    let currentDisplayedOrders = [];
+    let selectedOrderNos = new Set();
 
     const BRAND_LABELS = {
       tp_extra: "BAENGPUN แบ่งปันชอป (TP Extra)",
@@ -256,6 +221,9 @@
       if (!token) return;
 
       const company = document.getElementById('companySelect').value;
+      selectedOrderNos.clear();
+      updateBatchUI();
+
       try {
         const res = await fetch(`${API_BASE}/api/v1/admin/overview?company=${company}`, {
           headers: { 'x-admin-key': token }
@@ -271,10 +239,45 @@
           document.getElementById('statShipping').innerText = stats.shipping_orders || 0;
 
           allOrders = data.orders || [];
-          renderOrdersTable(allOrders);
+          currentDisplayedOrders = [...allOrders];
+          renderOrdersTable(currentDisplayedOrders);
         }
       } catch (err) {
         console.error(err);
+      }
+    }
+
+    function toggleSelectAll(masterCb) {
+      const cbs = document.querySelectorAll('.order-checkbox');
+      cbs.forEach(cb => {
+        cb.checked = masterCb.checked;
+        if (masterCb.checked) {
+          selectedOrderNos.add(cb.value);
+        } else {
+          selectedOrderNos.delete(cb.value);
+        }
+      });
+      updateBatchUI();
+    }
+
+    function toggleOrderSelect(cb) {
+      if (cb.checked) {
+        selectedOrderNos.add(cb.value);
+      } else {
+        selectedOrderNos.delete(cb.value);
+        document.getElementById('selectAllCheckbox').checked = false;
+      }
+      updateBatchUI();
+    }
+
+    function updateBatchUI() {
+      const count = selectedOrderNos.size;
+      const btn = document.getElementById('batchPrintBtn');
+      document.getElementById('selectedCount').innerText = count;
+      if (count > 0) {
+        btn.classList.remove('hidden');
+      } else {
+        btn.classList.add('hidden');
       }
     }
 
@@ -293,34 +296,109 @@
       });
     }
 
+    function generateLabelHtml(order, brandName, index) {
+      return `
+        <div class="label-page border-2 border-dashed border-slate-400 rounded-lg">
+          <div class="border-b-2 border-black pb-2 mb-2 flex justify-between items-start">
+            <div>
+              <span class="text-base font-bold tracking-wider">${brandName}</span>
+              <p class="text-[10px] text-gray-700">ผู้ส่ง: คลังสินค้าและศูนย์กระจายสินค้า TP Extra</p>
+              <p class="text-[10px] text-gray-700">เบอร์ติดต่อศูนย์รับส่ง: 02-XXX-XXXX</p>
+            </div>
+            <div class="text-right">
+              <span class="border-2 border-black px-2 py-0.5 font-bold text-xs">STANDARD</span>
+            </div>
+          </div>
+
+          <div class="flex flex-col items-center justify-center my-2 border-b-2 border-black pb-2">
+            <svg id="barcodeSvg_${index}" class="max-h-14"></svg>
+            <span class="font-mono text-xs font-bold tracking-widest mt-0.5">${order.order_no}</span>
+          </div>
+
+          <div class="border-2 border-black rounded p-2 mb-2 bg-gray-50/20">
+            <div class="flex items-center justify-between border-b border-gray-400 pb-1 mb-1">
+              <span class="text-xs font-bold uppercase tracking-wide">📍 ข้อมูลผู้รับ (RECIPIENT)</span>
+              <span class="font-bold text-sm text-black">${order.customer_phone || '-'}</span>
+            </div>
+            <div class="space-y-1">
+              <p class="text-sm font-bold text-black">${order.customer_name || 'ลูกค้าไม่ระบุชื่อ'}</p>
+              <p class="text-xs text-black leading-relaxed whitespace-pre-wrap">${order.shipping_address || '-'}</p>
+            </div>
+          </div>
+
+          <div class="border border-black rounded p-2 text-xs space-y-1">
+            <div class="flex justify-between items-center text-[11px]">
+              <span>ยอดชำระสุทธิ:</span>
+              <span class="font-bold">฿${parseFloat(order.total_amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+            </div>
+            <div class="flex justify-between items-center text-[11px]">
+              <span>สถานะการชำระ:</span>
+              <span class="font-bold">${order.status === 'paid' ? 'ชำระเงินเรียบร้อยแล้ว (PAID)' : order.status.toUpperCase()}</span>
+            </div>
+            <div class="flex justify-between items-center text-[10px] text-gray-600 border-t border-gray-300 pt-1 mt-1">
+              <span>วันที่พิมพ์เอกสาร:</span>
+              <span>${new Date().toLocaleString('th-TH')}</span>
+            </div>
+          </div>
+
+          <div class="text-center mt-3 text-[9px] text-gray-600">
+            *** กรุณาตรวจสอบพัสดุและถ่ายคลิปวิดีโอก่อนเปิดกล่องทุกครั้ง ***
+          </div>
+        </div>
+      `;
+    }
+
     function printShippingLabel(orderNo) {
       const order = allOrders.find(o => o.order_no === orderNo);
       if (!order) return;
-
       if (!order.customer_name && !order.shipping_address) {
         showToast("ไม่สามารถพิมพ์ได้ เนื่องจากไม่มีที่อยู่จัดส่ง", "⚠️");
         return;
       }
+      renderAndPrintLabels([order]);
+    }
 
+    function printSelectedLabels() {
+      const ordersToPrint = allOrders.filter(o => selectedOrderNos.has(o.order_no));
+      const validOrders = ordersToPrint.filter(o => o.customer_name || o.shipping_address);
+
+      if (validOrders.length === 0) {
+        showToast("ออเดอร์ที่เลือกไม่มีข้อมูลที่อยู่จัดส่ง", "⚠️");
+        return;
+      }
+
+      if (validOrders.length < ordersToPrint.length) {
+        alert(`มีบางออเดอร์ (${ordersToPrint.length - validOrders.length} รายการ) ถูกข้ามเนื่องจากไม่มีข้อมูลที่อยู่จัดส่ง`);
+      }
+
+      renderAndPrintLabels(validOrders);
+    }
+
+    function renderAndPrintLabels(orders) {
       const company = document.getElementById('companySelect').value;
-      document.getElementById('labelBrandName').innerText = BRAND_LABELS[company] || "PRO NEXUS OS";
-      document.getElementById('labelOrderNo').innerText = order.order_no;
-      document.getElementById('labelName').innerText = order.customer_name || 'ลูกค้าไม่ระบุชื่อ';
-      document.getElementById('labelPhone').innerText = order.customer_phone || '-';
-      document.getElementById('labelAddress').innerText = order.shipping_address || '-';
-      document.getElementById('labelAmount').innerText = `฿${parseFloat(order.total_amount).toLocaleString(undefined, {minimumFractionDigits: 2})}`;
-      document.getElementById('labelPrintDate').innerText = new Date().toLocaleString('th-TH');
+      const brandName = BRAND_LABELS[company] || "PRO NEXUS OS";
+      const container = document.getElementById('printContainer');
 
-      // สร้างบาร์โค้ด Code 128
-      JsBarcode("#barcodeSvg", order.order_no, {
-        format: "CODE128",
-        width: 1.8,
-        height: 45,
-        displayValue: false
+      container.innerHTML = orders.map((o, idx) => generateLabelHtml(o, brandName, idx)).join('');
+
+      // สร้าง Barcode สำหรับแต่ละใบ
+      orders.forEach((o, idx) => {
+        try {
+          JsBarcode(`#barcodeSvg_${idx}`, o.order_no, {
+            format: "CODE128",
+            width: 1.8,
+            height: 45,
+            displayValue: false
+          });
+        } catch (err) {
+          console.error("Barcode generation error:", err);
+        }
       });
 
-      // สั่งเปิดหน้าต่าง Print ของเบราว์เซอร์
-      window.print();
+      // พักเล็กน้อยเพื่อให้ SVG วาดเสร็จสมบูรณ์ก่อนเปิดหน้าต่างพิมพ์
+      setTimeout(() => {
+        window.print();
+      }, 150);
     }
 
     function exportToCSV() {
@@ -360,13 +438,17 @@
     function renderOrdersTable(orders) {
       const tbody = document.getElementById('ordersBody');
       if (orders.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" class="text-center p-8 text-slate-400">ไม่พบคำสั่งซื้อ</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="8" class="text-center p-8 text-slate-400">ไม่พบคำสั่งซื้อ</td></tr>`;
         return;
       }
       tbody.innerHTML = orders.map(o => {
         const hasAddress = o.customer_name || o.shipping_address;
+        const isChecked = selectedOrderNos.has(o.order_no) ? 'checked' : '';
         return `
           <tr class="hover:bg-slate-50 transition">
+            <td class="p-4 text-center">
+              <input type="checkbox" value="${o.order_no}" ${isChecked} onchange="toggleOrderSelect(this)" class="order-checkbox w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer">
+            </td>
             <td class="p-4 font-mono font-bold text-slate-800">${o.order_no}</td>
             <td class="p-4 max-w-xs">
               ${hasAddress ? `
@@ -445,11 +527,12 @@
 
     function filterTable() {
       const q = document.getElementById('searchInput').value.toLowerCase();
-      renderOrdersTable(allOrders.filter(o => 
+      currentDisplayedOrders = allOrders.filter(o => 
         (o.order_no && o.order_no.toLowerCase().includes(q)) || 
         (o.customer_name && o.customer_name.toLowerCase().includes(q)) ||
         (o.customer_phone && o.customer_phone.toLowerCase().includes(q))
-      ));
+      );
+      renderOrdersTable(currentDisplayedOrders);
     }
 
     window.addEventListener('DOMContentLoaded', checkAuth);
