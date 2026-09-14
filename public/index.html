@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BAENGPUN แบ่งปันชอป</title>
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#06C755">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="แบ่งปันชอป">
+  <link rel="apple-touch-icon" href="/icons/icon-192.png">
+  <style>
+    body { font-family: sans-serif; margin: 0; padding: 20px; background: #f8f9fa; }
+    .card { background: white; padding: 24px; border-radius: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); text-align: center; margin-top: 40px; }
+    .install-banner { display: none; position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #ffffff; padding: 12px 20px; border-radius: 30px; box-shadow: 0 4px 20px rgba(0,0,0,0.15); z-index: 9999; align-items: center; gap: 12px; border: 1px solid #e0e0e0; }
+    .btn-install { background-color: #06C755; color: white; border: none; padding: 8px 16px; border-radius: 20px; font-weight: bold; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>🛍️ BAENGPUN แบ่งปันชอป</h2>
+    <p>ระบบร้านค้าและแค็ตตาล็อกออนไลน์สำหรับสมาชิก TP Extra</p>
+  </div>
+
+  <div id="installContainer" class="install-banner">
+    <span>📲 ติดตั้งแอปแบ่งปันชอป</span>
+    <button id="btnInstallApp" class="btn-install">เพิ่มลงหน้าจอ</button>
+  </div>
+
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js');
+      });
+    }
+
+    let deferredPrompt;
+    const installContainer = document.getElementById('installContainer');
+    const btnInstallApp = document.getElementById('btnInstallApp');
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      installContainer.style.display = 'flex';
+    });
+
+    btnInstallApp.addEventListener('click', async () => {
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+        deferredPrompt = null;
+        installContainer.style.display = 'none';
+      }
+    });
+  </script>
+</body>
+</html>
