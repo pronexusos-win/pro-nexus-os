@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pack & Verify Station - จุดตรวจเช็กและแพ็กสินค้า</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&family=Prompt:wght@500;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Sarabun', sans-serif; }
+    .display-font { font-family: 'Prompt', sans-serif; }
+  </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col">
+
+  <!-- Header ประจำโต๊ะแพ็ก -->
+  <header class="bg-slate-800/80 border-b border-slate-700 px-6 py-4 flex justify-between items-center">
+    <div class="flex items-center gap-3">
+      <span class="text-2xl">📦</span>
+      <div>
+        <h1 class="display-font text-lg font-bold text-white tracking-wide">PACK & VERIFY STATION</h1>
+        <p class="text-xs text-slate-400">สถานียิงบาร์โค้ดตรวจเช็กพัสดุก่อนปิดผนึกกล่อง</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-4">
+      <select id="companySelect" class="bg-slate-900 border border-slate-700 text-slate-200 text-xs rounded-lg px-3 py-2 font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+        <option value="tp_extra" selected>TP Extra (BAENGPUN แบ่งปันชอป)</option>
+        <option value="pro_nexus">Pro Nexus</option>
+        <option value="luck_kio">Luck Kio</option>
+        <option value="peak_icon">Peak Icon</option>
+      </select>
+      <div class="text-right">
+        <span class="text-xs text-slate-400 block">กล่องที่สแกนสำเร็จวันนี้</span>
+        <span id="sessionCounter" class="display-font text-xl font-black text-emerald-400">0</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="flex-1 max-w-5xl w-full mx-auto p-6 flex flex-col gap-6">
+
+    <!-- แถบยิงสแกนบาร์โค้ด -->
+    <div class="bg-slate-800 border-2 border-emerald-500/50 rounded-2xl p-6 shadow-2xl">
+      <label class="block text-xs font-semibold text-emerald-400 uppercase tracking-wider mb-2">
+        ⚡ เครื่องสแกนพร้อมทำงาน (วางเคอร์เซอร์ไว้ที่นี่แล้วยิงบาร์โค้ดใบปะหน้าได้ทันที)
+      </label>
+      <div class="relative">
+        <input type="text" id="barcodeInput" autofocus placeholder="ยิงสแกนรหัส ORD-XXXXXX ที่นี่..." 
+          class="w-full bg-slate-950 border border-slate-700 rounded-xl px-5 py-4 text-2xl font-mono text-emerald-300 font-bold focus:outline-none focus:border-emerald-400 focus:ring-4 focus:ring-emerald-500/20 tracking-wider">
+        <button onclick="processScan()" class="absolute right-3 top-3 bottom-3 bg-emerald-600 hover:bg-emerald-500 text-white px-6 rounded-lg font-bold text-sm transition">
+          ตรวจเช็ก
+        </button>
+      </div>
+      <p id="statusMsg" class="text-xs text-slate-400 mt-2 flex items-center gap-1.5">
+        <span>💡</span> เครื่องยิงบาร์โค้ดจะส่งค่ารหัสพร้อมจำลองการกด Enter ให้อัตโนมัติ
+      </p>
+    </div>
+
+    <!-- ส่วนแสดงผลข้อมูลการตรวจเช็กกล่องล่าสุด -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 flex-1">
+      
+      <!-- ข้อมูลผู้รับและออเดอร์ -->
+      <div class="md:col-span-2 bg-slate-800/60 border border-slate-700/80 rounded-2xl p-6 flex flex-col justify-between">
+        <div>
+          <div class="flex justify-between items-start border-b border-slate-700 pb-4 mb-4">
+            <div>
+              <span class="text-xs text-slate-400 uppercase">รหัสคำสั่งซื้อล่าสุด</span>
+              <h2 id="dispOrderNo" class="display-font text-3xl font-black text-white tracking-wider mt-1">---</h2>
+            </div>
+            <span id="dispBadge" class="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-slate-700 text-slate-300">
+              รอสแกน
+            </span>
+          </div>
+
+          <div class="space-y-4">
+            <div>
+              <span class="text-xs text-slate-400">ผู้รับพัสดุ:</span>
+              <p id="dispName" class="text-lg font-bold text-slate-200 mt-0.5">-</p>
+            </div>
+            <div>
+              <span class="text-xs text-slate-400">เบอร์โทรติดต่อ:</span>
+              <p id="dispPhone" class="text-sm font-mono text-emerald-400 font-bold mt-0.5">-</p>
+            </div>
+            <div>
+              <span class="text-xs text-slate-400">ที่อยู่จัดส่งบนกล่อง:</span>
+              <p id="dispAddress" class="text-xs text-slate-300 leading-relaxed mt-0.5 bg-slate-900/80 p-3 rounded-lg border border-slate-800">
+                -
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div class="pt-4 border-t border-slate-700 flex justify-between items-center text-xs text-slate-400">
+          <span>ยอดชำระ: <b id="dispAmount" class="text-white text-sm">฿0.00</b></span>
+          <span id="dispTimestamp">-</span>
+        </div>
+      </div>
+
+      <!-- ประวัติการยิงสแกนในกะการทำงาน (Packing Log) -->
+      <div class="bg-slate-800/60 border border-slate-700/80 rounded-2xl p-6 flex flex-col">
+        <h3 class="font-bold text-sm text-slate-200 border-b border-slate-700 pb-3 mb-3 flex items-center justify-between">
+          <span>📋 ประวัติการยิงล่าสุด</span>
+          <span class="text-[10px] text-slate-400 font-normal">เรียงจากใหม่สุด</span>
+        </h3>
+        <div id="scanHistory" class="flex-1 overflow-y-auto space-y-2 text-xs pr-1">
+          <p class="text-slate-500 italic text-center py-6">ยังไม่มีประวัติการสแกน</p>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <script>
+    const API_BASE = window.location.origin.includes('localhost') 
+      ? 'http://localhost:8000' 
+      : 'https://pro-nexus-os-production.up.railway.app';
+
+    let packedCount = 0;
+    const barcodeInput = document.getElementById('barcodeInput');
+
+    // สร้างระบบเสียงแจ้งเตือนความถี่สูง (Web Audio API ไม่ต้องพึ่งพาไฟล์ mp3 ภายนอก)
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    function playBeep(success = true) {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      if (success) {
+        osc.frequency.setValueAtTime(880, audioCtx.currentTime); // โน้ต A5 เสียงใส
+        gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.12);
+      } else {
+        osc.frequency.setValueAtTime(220, audioCtx.currentTime); // โน้ต A3 เสียงเตือนต่ำ
+        gain.gain.setValueAtTime(0.25, audioCtx.currentTime);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.35);
+      }
+    }
+
+    // ล็อกเคอร์เซอร์ให้อยู่ในช่องสแกนตลอดเวลา
+    document.addEventListener('click', () => barcodeInput.focus());
+
+    barcodeInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        processScan();
+      }
+    });
+
+    async function processScan() {
+      const rawCode = barcodeInput.value.trim();
+      if (!rawCode) return;
+
+      const company = document.getElementById('companySelect').value;
+      const token = sessionStorage.getItem('admin_passcode') || 'admin1234';
+
+      barcodeInput.value = '';
+      const statusMsg = document.getElementById('statusMsg');
+      statusMsg.innerHTML = `<span class="text-indigo-400 animate-pulse">⏳ กำลังตรวจสอบรหัส ${rawCode}...</span>`;
+
+      try {
+        const res = await fetch(`${API_BASE}/api/v1/admin/orders/scan-pack`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-admin-key': token
+          },
+          body: JSON.stringify({
+            order_no: rawCode,
+            company_slug: company
+          })
+        });
+
+        const data = await res.json();
+        if (res.ok) {
+          playBeep(true);
+          packedCount++;
+          document.getElementById('sessionCounter').innerText = packedCount;
+          displayOrder(data.order, true);
+          addHistory(rawCode, true, data.order.customer_name);
+          statusMsg.innerHTML = `<span class="text-emerald-400 font-bold">✅ ตรวจสอบถูกต้อง! บรรจุลงกล่องและปิดเทปได้เลย</span>`;
+        } else {
+          playBeep(false);
+          displayError(rawCode, data.detail || "ไม่พบข้อมูลคำสั่งซื้อ");
+          addHistory(rawCode, false, data.detail);
+          statusMsg.innerHTML = `<span class="text-rose-400 font-bold">❌ ผิดพลาด: ${data.detail}</span>`;
+        }
+      } catch (err) {
+        playBeep(false);
+        statusMsg.innerHTML = `<span class="text-rose-400">⚠️ ไม่สามารถติดต่อเซิร์ฟเวอร์ได้</span>`;
+      } finally {
+        barcodeInput.focus();
+      }
+    }
+
+    function displayOrder(order, isSuccess) {
+      document.getElementById('dispOrderNo').innerText = order.order_no;
+      document.getElementById('dispName').innerText = order.customer_name || 'ไม่ได้ระบุชื่อ';
+      document.getElementById('dispPhone').innerText = order.customer_phone || '-';
+      document.getElementById('dispAddress').innerText = order.shipping_address || 'ไม่มีที่อยู่จัดส่ง';
+      document.getElementById('dispAmount').innerText = `฿${parseFloat(order.total_amount).toLocaleString(undefined, {minimumFractionDigits: 2})}`;
+      document.getElementById('dispTimestamp').innerText = `สแกนสำเร็จ: ${new Date().toLocaleTimeString('th-TH')}`;
+
+      const badge = document.getElementById('dispBadge');
+      badge.innerText = 'PACKED (ผ่าน)';
+      badge.className = 'px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-400 border border-emerald-500/30';
+    }
+
+    function displayError(orderNo, msg) {
+      document.getElementById('dispOrderNo').innerText = orderNo;
+      document.getElementById('dispName').innerText = 'ตรวจไม่ผ่าน';
+      document.getElementById('dispAddress').innerText = msg;
+
+      const badge = document.getElementById('dispBadge');
+      badge.innerText = 'REJECTED (ระงับ)';
+      badge.className = 'px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-rose-500/20 text-rose-400 border border-rose-500/30';
+    }
+
+    function addHistory(orderNo, success, info) {
+      const container = document.getElementById('scanHistory');
+      if (packedCount === 1 && success) container.innerHTML = '';
+
+      const time = new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      const item = document.createElement('div');
+      item.className = `p-2.5 rounded-lg border flex items-center justify-between ${
+        success ? 'bg-emerald-950/30 border-emerald-800/40 text-emerald-200' : 'bg-rose-950/30 border-rose-800/40 text-rose-200'
+      }`;
+      item.innerHTML = `
+        <div>
+          <span class="font-mono font-bold">${orderNo}</span>
+          <p class="text-[10px] text-slate-400 truncate max-w-[140px]">${info || '-'}</p>
+        </div>
+        <span class="text-[10px] font-mono text-slate-400">${time}</span>
+      `;
+      container.prepend(item);
+    }
+  </script>
+</body>
+</html>

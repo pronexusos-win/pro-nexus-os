@@ -277,3 +277,46 @@ async def import_tracking_file(
         "pushed_count": pushed_count,
         "errors": errors
     }
+
+
+class ScanPackRequest(BaseModel):
+    order_no: str
+    company_slug: str = "tp_extra"
+
+@router.post("/orders/scan-pack")
+def scan_pack_order(payload: ScanPackRequest, admin_key: str = Depends(verify_admin_key)):
+    order_no = payload.order_no.strip()
+    with get_db_connection() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT id, order_no, customer_name, customer_phone, shipping_address, 
+                       total_amount, status, company_slug
+                FROM orders 
+                WHERE order_no = %s AND company_slug = %s;
+                """,
+                (order_no, payload.company_slug)
+            )
+            order = cursor.fetchone()
+            if not order:
+                raise HTTPException(status_code=404, detail=f"ไม่พบออเดอร์ {order_no}")
+
+            if order["status"] == "pending_payment":
+                raise HTTPException(status_code=400, detail=f"ออเดอร์นี้ยังไม่ชำระเงิน (สถานะ: {order['status']})")
+
+            # อัปเดตสถานะเป็น packed เพื่อระบุว่าตรวจและบรรจุกล่องแล้ว
+            cursor.execute(
+                """
+                UPDATE orders 
+                SET status = 'packed', updated_at = NOW() 
+                WHERE order_no = %s;
+                """,
+                (order_no,)
+            )
+            conn.commit()
+
+    return {
+        "status": "success",
+        "message": f"ตรวจเช็กและแพ็กออเดอร์ {order_no} สำเร็จ",
+        "order": order
+    }
