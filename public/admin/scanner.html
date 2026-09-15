@@ -231,6 +231,22 @@
                     <span class="text-slate-400">ราคาขาย:</span>
                     <b class="text-white text-lg font-mono">฿${data.price.toFixed(2)}</b>
                   </div>
+                  <!-- กล่องคะแนนดาวและรีวิว Social Proof -->
+                  <div class="bg-amber-950/40 border border-amber-500/30 rounded-xl p-2.5 space-y-1">
+                    <div class="flex items-center justify-between">
+                      <div class="flex items-center gap-1">
+                        <span class="text-amber-400 text-sm font-black">★ ${data.rating_score || "4.9"}</span>
+                        <div class="text-amber-400 text-xs">★★★★★</div>
+                        <span class="text-[10px] text-slate-400">(${data.total_reviews || "128"} รีวิว)</span>
+                      </div>
+                      <span class="px-1.5 py-0.5 bg-emerald-500/20 text-emerald-300 text-[9px] font-bold rounded border border-emerald-500/30">
+                        ✓ ซื้อซ้ำ 96%
+                      </span>
+                    </div>
+                    <p class="text-[11px] text-amber-200/90 italic font-medium">
+                      💬 "${data.highlight_review || "ใช้ดีมาก สั่งซ้ำรอบที่ 3 แล้ว แนะนำเลยค่ะ"}"
+                    </p>
+                  </div>
                   <div class="text-[11px] text-slate-300 space-y-1">
                     <p class="text-emerald-400">✓ สินค้าแท้คลังส่วนกลาง มี อย. รับรอง</p>
                     <p class="text-slate-400">ล็อตผลิต: ${data.lot_no || "N/A"} (ควบคุม FEFO ล็อตสดใหม่)</p>
