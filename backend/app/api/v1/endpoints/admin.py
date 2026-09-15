@@ -1425,3 +1425,54 @@ def api_verify_receive_transfer(payload: VerifyReceiveTransferRequest, admin_key
         return res
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+from backend.app.services.cycle_count_service import (
+    get_blind_count_sheet, process_blind_count_submission
+)
+
+class BlindCountSubmitRequest(BaseModel):
+    branch_id: str = "HEADQUARTER"
+    company_slug: str = "tp_extra"
+    counter_emp: str
+    witness_emp: str
+    records: list
+
+@router.get("/audit/blind-sheet")
+def api_get_blind_sheet(branch_id: str = "HEADQUARTER", company: str = "tp_extra", admin_key: str = Depends(verify_admin_key)):
+    sheet = get_blind_count_sheet(branch_id=branch_id, company_slug=company)
+    return sheet
+
+@router.post("/audit/submit-blind-count")
+def api_submit_blind_count(payload: BlindCountSubmitRequest, admin_key: str = Depends(verify_admin_key)):
+    try:
+        res = process_blind_count_submission(
+            counted_records=payload.records,
+            counter_emp=payload.counter_emp,
+            witness_emp=payload.witness_emp,
+            branch_id=payload.branch_id,
+            company_slug=payload.company_slug
+        )
+        return res
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@router.get("/audit/history")
+def get_audit_history(company: str = Query(default="tp_extra"), admin_key: str = Depends(verify_admin_key)):
+    with get_db_connection() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT audit_no, branch_id, DATE_FORMAT(audit_date, '%d/%m/%Y') as audit_date,
+                       counter_emp_code, witness_emp_code, total_items_audited,
+                       matched_items_count, discrepant_items_count, net_variance_value,
+                       accuracy_rate_pct, audit_status,
+                       DATE_FORMAT(manager_signed_at, '%d/%m/%Y %H:%i') as signed_at
+                FROM inventory_cycle_audits
+                WHERE company_slug = %s
+                ORDER BY id DESC LIMIT 10;
+                """,
+                (company,)
+            )
+            audits = cursor.fetchall()
+    return {"status": "success", "audits": audits}

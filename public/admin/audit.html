@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Blind Cycle Count & Inventory Audit - Pro Nexus OS</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&family=Prompt:wght@500;700;900&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Sarabun', sans-serif; }
+    .display-font { font-family: 'Prompt', sans-serif; }
+  </style>
+</head>
+<body class="bg-slate-100 min-h-screen text-slate-800 p-4 sm:p-8">
+
+  <header class="max-w-6xl mx-auto mb-6 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-4">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-teal-700 flex items-center justify-center text-white text-xl font-black">📋</div>
+      <div>
+        <h1 class="display-font text-lg font-bold text-slate-900">BLIND CYCLE COUNT & INVENTORY AUDIT</h1>
+        <p class="text-xs text-slate-400">ระบบตรวจนับสต็อกตาบอด • ปิดซ่อนยอดระบบสกัดการคัดลอก • กระทบยอดผลต่างมาตรฐาน IPO</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-2">
+      <a href="index.html" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-600 px-3 py-2 rounded-lg font-semibold transition">
+        ← กลับหน้า Admin
+      </a>
+      <button onclick="loadBlindSheet()" class="text-xs bg-teal-700 hover:bg-teal-800 text-white font-bold px-3 py-2 rounded-lg transition">
+        🔄 เปิดใบนับสต็อกวันนี้
+      </button>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto space-y-6">
+
+    <!-- แผงหลักการควบคุมภายในแบบตาบอด (Blind Counting Control) -->
+    <section class="bg-teal-950 text-white p-6 rounded-3xl space-y-2 border border-teal-800 shadow-lg">
+      <div class="flex items-center gap-2">
+        <span class="text-amber-400 text-xl">🔒</span>
+        <h2 class="display-font font-bold text-base text-teal-200">นโยบายตรวจนับแบบตาบอด (Blind Audit Policy)</h2>
+      </div>
+      <p class="text-xs text-teal-100/80 leading-relaxed">
+        พนักงานผู้ตรวจนับและพยานจะไม่เห็นยอดสต็อกในระบบ เพื่อป้องกันการลอกตัวเลข ต้องนับจำนวนจริงบนชั้นวาง หากตัวเลขตรง 100% สาขาจะได้รับคะแนนความซื่อสัตย์สินค้า (Inventory Integrity Score) สำหรับจัดสรรเงินโบนัส Zero-Shrinkage Incentive
+      </p>
+    </section>
+
+    <!-- ใบนับสต็อกตาบอด (Blind Sheet Entry) -->
+    <section class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+      <div class="flex flex-wrap justify-between items-center border-b border-slate-100 pb-3 gap-2">
+        <div>
+          <h3 class="display-font font-bold text-base text-slate-900">📝 ใบนับสต็อกประจำรอบ (Blind Sheet Entry)</h3>
+          <p class="text-xs text-slate-400">กรอกจำนวนที่นับได้จริงบนเชลฟ์และในคลัง</p>
+        </div>
+        <div class="flex items-center gap-3 text-xs">
+          <div class="flex items-center gap-1">
+            <label class="text-slate-500 font-bold">ผู้นับ:</label>
+            <input type="text" id="auditCounter" value="EMP-2026-001" class="bg-slate-50 border border-slate-300 rounded px-2 py-1 font-mono">
+          </div>
+          <div class="flex items-center gap-1">
+            <label class="text-slate-500 font-bold">พยาน:</label>
+            <input type="text" id="auditWitness" value="MGR-001" class="bg-slate-50 border border-slate-300 rounded px-2 py-1 font-mono">
+          </div>
+        </div>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs">
+          <thead class="bg-slate-50 text-slate-500 font-bold uppercase border-b">
+            <tr>
+              <th class="p-3">สินค้า / รายละเอียด</th>
+              <th class="p-3">เลขล็อต (Lot No.)</th>
+              <th class="p-3">วันหมดอายุ (EXP)</th>
+              <th class="p-3 text-center">ยอดในระบบ</th>
+              <th class="p-3 text-center w-40">จำนวนที่นับจริง (ชิ้น)</th>
+            </tr>
+          </thead>
+          <tbody id="blindTableBody" class="divide-y divide-slate-100"></tbody>
+        </table>
+      </div>
+
+      <div class="pt-3 flex justify-end">
+        <button onclick="submitBlindAudit()" class="px-6 py-2.5 bg-teal-700 hover:bg-teal-800 text-white font-bold rounded-xl text-xs transition shadow-md">
+          ✓ ส่งยอดตรวจนับ & กระทบยอดผลต่าง
+        </button>
+      </div>
+    </section>
+
+    <!-- ประวัติการตรวจนับและผลต่างสต็อกที่ผ่านมา -->
+    <section class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-3">
+      <h3 class="display-font font-bold text-sm text-slate-900">📋 ประวัติการตรวจนับและกระทบยอดสต็อก (Audit History)</h3>
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs">
+          <thead class="bg-slate-50 text-slate-500 font-bold uppercase border-b">
+            <tr>
+              <th class="p-3">เลขที่รอบตรวจ</th>
+              <th class="p-3">วันที่ตรวจนับ</th>
+              <th class="p-3">ผู้นับ / พยาน</th>
+              <th class="p-3 text-center">รายการที่ตรวจ</th>
+              <th class="p-3 text-center">ความแม่นยำ (%)</th>
+              <th class="p-3">ผลต่างมูลค่า (บาท)</th>
+              <th class="p-3 text-center">สถานะ</th>
+            </tr>
+          </thead>
+          <tbody id="auditHistoryBody" class="divide-y divide-slate-100"></tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    const API_BASE = window.location.origin.includes('localhost') 
+      ? 'http://localhost:8000' 
+      : 'https://pro-nexus-os-production.up.railway.app';
+
+    let currentSheetItems = [];
+
+    async function loadBlindSheet() {
+      const token = sessionStorage.getItem('admin_passcode') || 'admin1234';
+      const tbody = document.getElementById('blindTableBody');
+      tbody.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-slate-400">กำลังเตรียมใบนับสต็อกตาบอด...</td></tr>';
+
+      try {
+        const res = await fetch(`${API_BASE}/api/v1/admin/audit/blind-sheet?branch_id=HEADQUARTER&company=tp_extra`, {
+          headers: { 'x-admin-key': token }
+        });
+        const data = await res.json();
+        if (data.status === 'success') {
+          currentSheetItems = data.items || [];
+          renderBlindTable(currentSheetItems);
+        }
+      } catch (err) {
+        tbody.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-rose-500">โหลดข้อมูลล้มเหลว</td></tr>';
+      }
+    }
+
+    function renderBlindTable(items) {
+      const tbody = document.getElementById('blindTableBody');
+      if (items.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-slate-400">ไม่มีรายการสินค้าที่ต้องตรวจนับ</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = items.map((it, idx) => `
+        <tr class="hover:bg-slate-50">
+          <td class="p-3">
+            <b class="text-slate-900 block">${it.product_name}</b>
+            <span class="text-[10px] font-mono text-slate-400">${it.sku}</span>
+          </td>
+          <td class="p-3 font-mono font-bold text-slate-700">${it.lot_no}</td>
+          <td class="p-3 font-mono text-slate-600">${it.expiry_date}</td>
+          <td class="p-3 text-center">
+            <span class="px-2.5 py-1 bg-slate-100 text-slate-400 font-mono text-xs rounded-lg select-none">
+              🔒 ซ่อนยอดระบบ
+            </span>
+          </td>
+          <td class="p-3 text-center">
+            <input type="number" id="countInput_${idx}" placeholder="ระบุยอดนับจริง" class="w-32 bg-slate-50 border border-teal-500 rounded-lg p-2 font-mono font-bold text-center text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-400">
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    async function submitBlindAudit() {
+      const token = sessionStorage.getItem('admin_passcode') || 'admin1234';
+      const counter = document.getElementById('auditCounter').value.trim();
+      const witness = document.getElementById('auditWitness').value.trim();
+
+      if (!counter || !witness) { alert("กรุณาระบุรหัสผู้นับและพยาน"); return; }
+
+      const records = [];
+      for (let i = 0; i < currentSheetItems.length; i++) {
+        const inputVal = document.getElementById(`countInput_${i}`).value;
+        if (inputVal === '') {
+          alert(`กรุณากรอกยอดนับของรายการที่ ${i+1} (${currentSheetItems[i].sku})`);
+          return;
+        }
+        records.push({
+          sku: currentSheetItems[i].sku,
+          lot_no: currentSheetItems[i].lot_no,
+          counted_qty: parseInt(inputVal)
+        });
+      }
+
+      try {
+        const res = await fetch(`${API_BASE}/api/v1/admin/audit/submit-blind-count`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-admin-key': token },
+          body: JSON.stringify({
+            branch_id: 'HEADQUARTER',
+            company_slug: 'tp_extra',
+            counter_emp: counter,
+            witness_emp: witness,
+            records: records
+          })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          alert(`ผลการตรวจนับรอบ ${data.audit_no}:\n• ความแม่นยำ: ${data.accuracy_rate_pct}%\n• รายการที่ตรง: ${data.matched_count}\n• รายการที่ต่าง: ${data.discrepant_count}\n• ผลต่างมูลค่า: ฿${data.net_variance_value.toFixed(2)}`);
+          loadAuditHistory();
+          loadBlindSheet();
+        } else {
+          alert("ข้อผิดพลาด: " + data.detail);
+        }
+      } catch (err) {
+        alert("ไม่สามารถติดต่อเซิร์ฟเวอร์ได้");
+      }
+    }
+
+    async function loadAuditHistory() {
+      const token = sessionStorage.getItem('admin_passcode') || 'admin1234';
+      try {
+        const res = await fetch(`${API_BASE}/api/v1/admin/audit/history?company=tp_extra`, {
+          headers: { 'x-admin-key': token }
+        });
+        const data = await res.json();
+        if (data.status === 'success') {
+          renderAuditHistory(data.audits || []);
+        }
+      } catch (err) {}
+    }
+
+    function renderAuditHistory(audits) {
+      const tbody = document.getElementById('auditHistoryBody');
+      if (audits.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="p-4 text-center text-slate-400">ยังไม่มีประวัติการตรวจนับ</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = audits.map(a => {
+        const isPerfect = a.audit_status === 'RECONCILED_PERFECT';
+        return `
+          <tr class="hover:bg-slate-50">
+            <td class="p-3 font-mono font-bold text-slate-900">${a.audit_no}</td>
+            <td class="p-3 font-mono">${a.audit_date}</td>
+            <td class="p-3">${a.counter_emp_code} / <span class="text-slate-500">${a.witness_emp_code}</span></td>
+            <td class="p-3 text-center font-mono">${a.total_items_audited} ล็อต</td>
+            <td class="p-3 text-center font-mono font-black ${isPerfect ? 'text-emerald-700' : 'text-amber-700'}">${a.accuracy_rate_pct}%</td>
+            <td class="p-3 font-mono font-bold ${parseFloat(a.net_variance_value) === 0 ? 'text-slate-800' : 'text-rose-600'}">฿${parseFloat(a.net_variance_value).toFixed(2)}</td>
+            <td class="p-3 text-center">
+              <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold ${isPerfect ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}">
+                ${isPerfect ? 'ตรงสมบูรณ์ 🟢' : 'มีส่วนต่างปรับปรุง ⚠️'}
+              </span>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      loadBlindSheet();
+      loadAuditHistory();
+    });
+  </script>
+</body>
+</html>
