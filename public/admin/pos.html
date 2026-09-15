@@ -364,6 +364,23 @@
       }
     }
 
+    
+    // ระบบตรวจจับและแยกประเภทภาษีสินค้าหน้าร้าน
+    async function checkProductTaxType(name) {
+      const token = sessionStorage.getItem('admin_passcode') || 'admin1234';
+      try {
+        const res = await fetch(`${API_BASE}/api/v1/admin/tax/classify-product`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-admin-key': token },
+          body: JSON.stringify({ product_name: name })
+        });
+        const json = await res.json();
+        return json.data;
+      } catch (err) {
+        return { is_vat_exempt: false, suggested_vat_category: 'VAT_STANDARD_7' };
+      }
+    }
+
     window.addEventListener('DOMContentLoaded', renderPOS);
   </script>
 </body>

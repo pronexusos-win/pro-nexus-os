@@ -1113,3 +1113,14 @@ def resolve_vendor_alert(payload: ResolveAlertRequest, admin_key: str = Depends(
             )
         conn.commit()
     return {"status": "success", "message": f"ปิดรายการแจ้งเตือน {payload.alert_id} เรียบร้อย"}
+
+
+from backend.app.services.vat_classifier import classify_product_tax
+
+class ClassifyProductTaxRequest(BaseModel):
+    product_name: str
+
+@router.post("/tax/classify-product")
+def api_classify_product_tax(payload: ClassifyProductTaxRequest, admin_key: str = Depends(verify_admin_key)):
+    result = classify_product_tax(payload.product_name)
+    return {"status": "success", "data": result}
