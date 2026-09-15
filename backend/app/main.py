@@ -1,13 +1,26 @@
-from fastapi.staticfiles import StaticFiles
-from backend.app.api.v1.endpoints.scanner_auth import router as scanner_auth_router
 import os
+import sys
+
+# แก้ปัญหา ModuleNotFoundError: No module named 'backend' ถาวร
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+ROOT_DIR = os.path.abspath(os.path.join(CURRENT_DIR, "../.."))
+if ROOT_DIR not in sys.path:
+    sys.path.insert(0, ROOT_DIR)
+
 import pymysql
+from datetime import datetime
+from typing import Optional, List
+from pydantic import BaseModel, Field
 from fastapi import FastAPI, HTTPException, Request, Header, status
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field
-from typing import Optional, List
-from datetime import datetime
-from backend.app.api.v1.endpoints.admin import router as admin_router
+from fastapi.staticfiles import StaticFiles
+
+try:
+    from backend.app.api.v1.endpoints.scanner_auth import router as scanner_auth_router
+    from backend.app.api.v1.endpoints.admin import router as admin_router
+except ModuleNotFoundError:
+    from app.api.v1.endpoints.scanner_auth import router as scanner_auth_router
+    from app.api.v1.endpoints.admin import router as admin_router
 
 app = FastAPI(title="Pro Nexus OS Platform - Production", version="1.0.2")
 
@@ -19,13 +32,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ดึงค่าเชื่อมต่อฐานข้อมูลจาก Railway
 DB_HOST = os.getenv("MYSQLHOST", os.getenv("DB_HOST", "127.0.0.1"))
 DB_PORT = int(os.getenv("MYSQLPORT", os.getenv("DB_PORT", 3306)))
 DB_USER = os.getenv("MYSQLUSER", os.getenv("DB_USER", "root"))
 DB_PASSWORD = os.getenv("MYSQLPASSWORD", os.getenv("DB_PASSWORD", "rootpassword"))
 DB_NAME = os.getenv("MYSQLDATABASE", os.getenv("DB_NAME", "railway"))
-
 
 def get_connection():
     return pymysql.connect(
@@ -38,31 +49,28 @@ def get_connection():
         autocommit=False
     )
 
-
-# กำหนดรายชื่อทั้ง 4 บริษัท (ใช้ pro_nexus ห้ามย่อ)
 COMPANIES = {
     "pro_nexus": {
         "name": "Pro Nexus",
         "company_id": "PRO_NEXUS",
-        "liff_id": "2011564874-MNIECumQ"
+        "liff_id": "2011616922-jSC5xYIz"
     },
     "tp_extra": {
         "name": "TP Extra",
         "company_id": "TP_EXTRA",
-        "liff_id": "2011576094-vwbg5mee"
+        "liff_id": "2011617055-OPEWQ4Qj"
     },
     "luck_kio": {
         "name": "Luck Kio",
         "company_id": "LUCK_KIO",
-        "liff_id": "2011579873-asAQ8pxU"
+        "liff_id": "2011617114-PYx0pWJE"
     },
     "peak_icon": {
         "name": "Peak Icon",
         "company_id": "PEAK_ICON",
-        "liff_id": "2011580328-yWlEyeOK"
+        "liff_id": "2011617202-XqnFMo1x"
     }
 }
-
 
 class MemberRegisterRequest(BaseModel):
     company_id: str
@@ -83,12 +91,10 @@ class MemberRegisterRequest(BaseModel):
     bank_account_no: Optional[str] = ""
     email: Optional[str] = ""
 
-
 class CartItem(BaseModel):
     product_id: str
     quantity: int
     price: float
-
 
 class POSCheckoutRequest(BaseModel):
     company_id: str
@@ -100,25 +106,18 @@ class POSCheckoutRequest(BaseModel):
     paid_shopping_point: float = 0.00
     items: List[CartItem]
 
-
 class ResetRequest(BaseModel):
     company_id: str
     admin_password: str
-
-# ----------------- SYSTEM & WEBHOOK ENDPOINTS -----------------
-
 
 @app.get("/")
 def root():
     return {"message": "Pro Nexus OS Backend is Online", "version": "1.0.2"}
 
-
+@app.get("/health")
 @app.get("/api/health")
 def health_check():
     return {"status": "ok", "timestamp": datetime.now().isoformat()}
-
-# Webhook รองรับทั้ง 4 บริษัท (ตอบ 200 OK ให้ LINE ทันที)
-
 
 @app.post("/api/v1/{company_slug}/webhook")
 async def line_webhook(
@@ -128,17 +127,11 @@ async def line_webhook(
 ):
     if company_slug not in COMPANIES:
         raise HTTPException(status_code=404, detail="Company not found")
-
-    body = await request.body()
-    # ตอบกลับ 200 ทันที เพื่อให้การ Verify ผ่านและ LINE ไม่ขึ้น Error
     return {
         "status": "ok",
         "company_slug": company_slug,
         "company_name": COMPANIES[company_slug]["name"]
     }
-
-# ----------------- SAAS / MLM / POS ENDPOINTS -----------------
-
 
 @app.get("/api/tenant/config/{company_id}")
 def get_tenant_config(company_id: str):
@@ -151,12 +144,10 @@ def get_tenant_config(company_id: str):
             )
             comp = cursor.fetchone()
             if not comp:
-                raise HTTPException(
-                    status_code=404, detail="ไม่พบบริษัทนี้ในระบบ")
+                raise HTTPException(status_code=404, detail="ไม่พบบริษัทนี้ในระบบ")
             return comp
     finally:
         conn.close()
-
 
 @app.post("/api/members/register", status_code=status.HTTP_201_CREATED)
 def register_member(req: MemberRegisterRequest):
@@ -165,26 +156,22 @@ def register_member(req: MemberRegisterRequest):
         with conn.cursor() as cursor:
             cursor.execute(
                 "SELECT member_id FROM members WHERE company_id = %s AND member_id = %s",
-                (req.company_id,
-                 req.upline_id))
+                (req.company_id, req.upline_id)
+            )
             if not cursor.fetchone():
-                raise HTTPException(
-                    status_code=400,
-                    detail="ไม่พบรหัสผู้แนะนำในระบบบริษัทนี้")
+                raise HTTPException(status_code=400, detail="ไม่พบรหัสผู้แนะนำในระบบบริษัทนี้")
 
             cursor.execute(
                 "SELECT member_id FROM members WHERE company_id = %s AND citizen_id = %s",
-                (req.company_id,
-                 req.citizen_id))
+                (req.company_id, req.citizen_id)
+            )
             if cursor.fetchone():
-                raise HTTPException(
-                    status_code=400,
-                    detail="เลขบัตรประชาชนนี้เคยลงทะเบียนในบริษัทนี้แล้ว")
+                raise HTTPException(status_code=400, detail="เลขบัตรประชาชนนี้เคยลงทะเบียนในบริษัทนี้แล้ว")
 
             cursor.execute(
                 "SELECT COUNT(*) as total FROM members WHERE company_id = %s FOR UPDATE",
-                (req.company_id,
-                 ))
+                (req.company_id,)
+            )
             seq = cursor.fetchone()['total'] + 1
             prefix_id = req.company_id[:2].upper()
             new_member_id = f"{prefix_id}{seq:06d}"
@@ -198,29 +185,17 @@ def register_member(req: MemberRegisterRequest):
             """
             cursor.execute(
                 sql,
-                (new_member_id,
-                 req.company_id,
-                 req.upline_id,
-                 req.prefix,
-                 req.first_name,
-                 req.last_name,
-                 req.citizen_id,
-                 req.phone,
-                 req.address_no,
-                 req.moo,
-                 req.soi_road,
-                 req.province,
-                 req.district,
-                 req.subdistrict,
-                 req.postcode,
-                 req.bank_name,
-                 req.bank_account_no,
-                 req.email))
+                (new_member_id, req.company_id, req.upline_id, req.prefix, req.first_name,
+                 req.last_name, req.citizen_id, req.phone, req.address_no, req.moo,
+                 req.soi_road, req.province, req.district, req.subdistrict, req.postcode,
+                 req.bank_name, req.bank_account_no, req.email)
+            )
             conn.commit()
             return {
                 "status": "success",
                 "member_id": new_member_id,
-                "message": "สมัครสมาชิกสำเร็จ"}
+                "message": "สมัครสมาชิกสำเร็จ"
+            }
     except HTTPException as he:
         conn.rollback()
         raise he
@@ -230,46 +205,37 @@ def register_member(req: MemberRegisterRequest):
     finally:
         conn.close()
 
-
 @app.post("/api/pos/checkout")
 def pos_checkout(req: POSCheckoutRequest):
     conn = get_connection()
     try:
         with conn.cursor() as cursor:
-            total_amount = sum(
-                item.quantity *
-                item.price for item in req.items)
+            total_amount = sum(item.quantity * item.price for item in req.items)
             order_id = f"ORD{datetime.now().strftime('%Y%m%d%H%M%S')}"
 
             cursor.execute(
                 "SELECT cash_point, shopping_point FROM members WHERE company_id = %s AND member_id = %s FOR UPDATE",
-                (req.company_id,
-                 req.member_id))
+                (req.company_id, req.member_id)
+            )
             buyer = cursor.fetchone()
             if not buyer:
-                raise HTTPException(
-                    status_code=404,
-                    detail="ไม่พบข้อมูลสมาชิกลูกค้า")
+                raise HTTPException(status_code=404, detail="ไม่พบข้อมูลสมาชิกลูกค้า")
 
             if req.paid_cash_point > 0:
                 if buyer["cash_point"] < req.paid_cash_point:
-                    raise HTTPException(
-                        status_code=400, detail="Cash Point ไม่เพียงพอ")
+                    raise HTTPException(status_code=400, detail="Cash Point ไม่เพียงพอ")
                 cursor.execute(
                     "UPDATE members SET cash_point = cash_point - %s WHERE company_id = %s AND member_id = %s",
-                    (req.paid_cash_point,
-                     req.company_id,
-                     req.member_id))
+                    (req.paid_cash_point, req.company_id, req.member_id)
+                )
 
             if req.paid_shopping_point > 0:
                 if buyer["shopping_point"] < req.paid_shopping_point:
-                    raise HTTPException(
-                        status_code=400, detail="Shopping Point ไม่เพียงพอ")
+                    raise HTTPException(status_code=400, detail="Shopping Point ไม่เพียงพอ")
                 cursor.execute(
                     "UPDATE members SET shopping_point = shopping_point - %s WHERE company_id = %s AND member_id = %s",
-                    (req.paid_shopping_point,
-                     req.company_id,
-                     req.member_id))
+                    (req.paid_shopping_point, req.company_id, req.member_id)
+                )
 
             for item in req.items:
                 cursor.execute(
@@ -278,8 +244,7 @@ def pos_checkout(req: POSCheckoutRequest):
                 )
                 stock_row = cursor.fetchone()
                 if not stock_row or stock_row["stock_quantity"] < item.quantity:
-                    raise HTTPException(
-                        status_code=400, detail=f"สินค้า {item.product_id} ในสต็อกไม่เพียงพอ")
+                    raise HTTPException(status_code=400, detail=f"สินค้า {item.product_id} ในสต็อกไม่เพียงพอ")
 
                 cursor.execute(
                     "UPDATE branch_stocks SET stock_quantity = stock_quantity - %s WHERE company_id = %s AND branch_id = %s AND product_id = %s",
@@ -308,8 +273,8 @@ def pos_checkout(req: POSCheckoutRequest):
             for gen in range(1, 5):
                 cursor.execute(
                     "SELECT upline_id FROM members WHERE company_id = %s AND member_id = %s",
-                    (req.company_id,
-                     curr_member))
+                    (req.company_id, curr_member)
+                )
                 row = cursor.fetchone()
                 if not row or not row["upline_id"]:
                     break
@@ -323,7 +288,6 @@ def pos_checkout(req: POSCheckoutRequest):
                     INSERT INTO point_transactions (company_id, order_id, member_id, generation, cash_point_added, shopping_point_added, txn_type)
                     VALUES (%s, %s, %s, %s, %s, %s, 'COMMISSION')
                 """, (req.company_id, order_id, curr_upline, gen, cash_slice, shop_slice))
-
                 curr_member = curr_upline
 
             conn.commit()
@@ -331,7 +295,8 @@ def pos_checkout(req: POSCheckoutRequest):
                 "status": "success",
                 "order_id": order_id,
                 "total_amount": total_amount,
-                "message": "ชำระเงินและปันผล 5 ชั้นสำเร็จ"}
+                "message": "ชำระเงินและปันผล 5 ชั้นสำเร็จ"
+            }
     except HTTPException as he:
         conn.rollback()
         raise he
@@ -341,53 +306,30 @@ def pos_checkout(req: POSCheckoutRequest):
     finally:
         conn.close()
 
-
 @app.post("/api/admin/system/reset")
 def reset_company_data(req: ResetRequest):
     if req.admin_password != "CLEAN2026":
-        raise HTTPException(status_code=403,
-                            detail="รหัสผ่าน Super Admin ไม่ถูกต้อง")
+        raise HTTPException(status_code=403, detail="รหัสผ่าน Super Admin ไม่ถูกต้อง")
 
     conn = get_connection()
     try:
         with conn.cursor() as cursor:
-            cursor.execute(
-                "DELETE FROM point_transactions WHERE company_id = %s", (req.company_id,))
-            cursor.execute(
-                "DELETE FROM orders WHERE company_id = %s", (req.company_id,))
-            cursor.execute(
-                "UPDATE branch_stocks SET stock_quantity = 0 WHERE company_id = %s",
-                (req.company_id,
-                 ))
-            cursor.execute(
-                "DELETE FROM members WHERE company_id = %s AND role != 'COMPANY_ADMIN'",
-                (req.company_id,
-                 ))
-            cursor.execute(
-                "UPDATE members SET cash_point = 0.00, shopping_point = 0.00 WHERE company_id = %s AND role = 'COMPANY_ADMIN'",
-                (req.company_id,
-                 ))
+            cursor.execute("DELETE FROM point_transactions WHERE company_id = %s", (req.company_id,))
+            cursor.execute("DELETE FROM orders WHERE company_id = %s", (req.company_id,))
+            cursor.execute("UPDATE branch_stocks SET stock_quantity = 0 WHERE company_id = %s", (req.company_id,))
+            cursor.execute("DELETE FROM members WHERE company_id = %s AND role != 'COMPANY_ADMIN'", (req.company_id,))
+            cursor.execute("UPDATE members SET cash_point = 0.00, shopping_point = 0.00 WHERE company_id = %s AND role = 'COMPANY_ADMIN'", (req.company_id,))
             conn.commit()
-            return {
-                "status": "success",
-                "message": "ล้างข้อมูลระบบเรียบร้อย พร้อมใช้งานจริง"}
+            return {"status": "success", "message": "ล้างข้อมูลระบบเรียบร้อย พร้อมใช้งานจริง"}
     except Exception as e:
         conn.rollback()
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         conn.close()
 
-
 app.include_router(scanner_auth_router, prefix="/api/v1")
 app.include_router(admin_router)
 
-
-# ตรวจสอบและ mount โฟลเดอร์ public/admin ให้เข้าถึงผ่าน /admin ได้โดยตรง
-admin_dir = os.path.join(os.getcwd(), "public", "admin")
+admin_dir = os.path.join(ROOT_DIR, "public", "admin")
 if os.path.exists(admin_dir):
-    app.mount(
-        "/admin",
-        StaticFiles(
-            directory=admin_dir,
-            html=True),
-        name="admin")
+    app.mount("/admin", StaticFiles(directory=admin_dir, html=True), name="admin")

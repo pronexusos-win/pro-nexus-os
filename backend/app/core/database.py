@@ -1,8 +1,14 @@
 import os
+import sys
+import logging
 import pymysql
 from dbutils.pooled_db import PooledDB
 from contextlib import contextmanager
-import logging
+
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+ROOT_DIR = os.path.abspath(os.path.join(CURRENT_DIR, "../../.."))
+if ROOT_DIR not in sys.path:
+    sys.path.insert(0, ROOT_DIR)
 
 logger = logging.getLogger("db_pool")
 _pool = None
@@ -19,7 +25,7 @@ def get_db_pool():
         try:
             _pool = PooledDB(
                 creator=pymysql,
-                mincached=0,  # หัวใจสำคัญ: ไม่ต่อ DB จนกว่าจะมีการเรียกใช้งานจริง
+                mincached=0,
                 maxcached=10,
                 maxconnections=20,
                 blocking=True,
@@ -32,7 +38,7 @@ def get_db_pool():
                 autocommit=True
             )
         except Exception as e:
-            logger.error(f"DB Error: {e}")
+            logger.error(f"DB Connection Pool Error: {e}")
             raise
     return _pool
 

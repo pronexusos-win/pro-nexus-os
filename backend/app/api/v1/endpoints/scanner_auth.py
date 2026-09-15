@@ -1,8 +1,18 @@
+import os
+import sys
 import secrets
-from datetime import datetime
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from backend.app.core.database import get_db_connection
+
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+ROOT_DIR = os.path.abspath(os.path.join(CURRENT_DIR, "../../../.."))
+if ROOT_DIR not in sys.path:
+    sys.path.insert(0, ROOT_DIR)
+
+try:
+    from backend.app.core.database import get_db_connection
+except ModuleNotFoundError:
+    from app.core.database import get_db_connection
 
 router = APIRouter(prefix="/scanner-auth", tags=["Scanner Multi-Company Auth"])
 
