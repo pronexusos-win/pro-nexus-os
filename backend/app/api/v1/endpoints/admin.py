@@ -1049,3 +1049,67 @@ def mark_task_submitted_and_paid(payload: MarkTaskPaidRequest, admin_key: str = 
         "status": "success",
         "message": f"บันทึกผลการยื่นแบบและชำระเงินงานลำดับที่ {payload.task_id} สำเร็จเรียบร้อย (เลขที่ใบเสร็จ: {payload.receipt_no})"
     }
+
+
+from backend.app.services.vendor_governance_service import scan_and_generate_vendor_alerts
+
+class ResolveAlertRequest(BaseModel):
+    alert_id: int
+    resolved_by: str = "ADMIN_BUYER"
+
+@router.get("/vendors/dashboard")
+def get_vendor_governance_dashboard(company: str = Query(default="tp_extra"), admin_key: str = Depends(verify_admin_key)):
+    # สแกนความเสี่ยงอัตโนมัติก่อนส่งข้อมูล
+    scan_and_generate_vendor_alerts(company_slug=company)
+
+    with get_db_connection() as conn:
+        with conn.cursor() as cursor:
+            # 1. รายการแจ้งเตือนคู่ค้าที่ยังค้างอยู่
+            cursor.execute(
+                """
+                SELECT id, supplier_code, alert_type, severity, alert_title, alert_detail,
+                       DATE_FORMAT(due_date, '%d/%m/%Y') as due_date_formatted,
+                       DATEDIFF(due_date, CURDATE()) as days_left
+                FROM vendor_governance_alerts
+                WHERE is_resolved = FALSE
+                ORDER BY FIELD(severity, 'CRITICAL', 'HIGH', 'MEDIUM', 'LOW'), due_date ASC;
+                """
+            )
+            alerts = cursor.fetchall()
+
+            # 2. รายชื่อคู่ค้าทั้งหมดและสถานะความสอดคล้องทางกฎหมาย
+            cursor.execute(
+                """
+                SELECT supplier_code, company_name, vendor_type, contact_person, contact_phone,
+                       DATE_FORMAT(contract_end_date, '%d/%m/%Y') as contract_end_date,
+                       DATEDIFF(contract_end_date, CURDATE()) as contract_days_left,
+                       fda_license_no, performance_grade, compliance_status
+                FROM vendor_compliance_profiles
+                WHERE company_slug = %s
+                ORDER BY contract_days_left ASC;
+                """,
+                (company,)
+            )
+            vendors = cursor.fetchall()
+
+    return {
+        "status": "success",
+        "active_alerts_count": len(alerts),
+        "alerts": alerts,
+        "vendors": vendors
+    }
+
+@router.post("/vendors/resolve-alert")
+def resolve_vendor_alert(payload: ResolveAlertRequest, admin_key: str = Depends(verify_admin_key)):
+    with get_db_connection() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                """
+                UPDATE vendor_governance_alerts
+                SET is_resolved = TRUE, resolved_by = %s, resolved_at = NOW()
+                WHERE id = %s;
+                """,
+                (payload.resolved_by, payload.alert_id)
+            )
+        conn.commit()
+    return {"status": "success", "message": f"ปิดรายการแจ้งเตือน {payload.alert_id} เรียบร้อย"}
