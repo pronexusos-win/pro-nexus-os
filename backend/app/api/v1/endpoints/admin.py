@@ -742,3 +742,17 @@ def get_corporate_governance_summary(company: str = Query(default="tp_extra"), a
         "shareholders": shareholders,
         "recent_dividends": declarations
     }
+
+
+from backend.app.services.compliance_guard import scan_text_compliance
+
+class ComplianceCheckRequest(BaseModel):
+    text_to_check: str
+
+@router.post("/compliance/check-text")
+def check_compliance_text(payload: ComplianceCheckRequest, admin_key: str = Depends(verify_admin_key)):
+    result = scan_text_compliance(payload.text_to_check)
+    return {
+        "status": "success",
+        "result": result
+    }
