@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IPO-Grade Human Capital Governance - Pro Nexus OS</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&family=Prompt:wght@500;700;900&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Sarabun', sans-serif; }
+    .display-font { font-family: 'Prompt', sans-serif; }
+  </style>
+</head>
+<body class="bg-slate-100 min-h-screen text-slate-800 p-4 sm:p-8">
+
+  <header class="max-w-6xl mx-auto mb-6 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-4">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-teal-600 flex items-center justify-center text-white text-xl font-black">👥</div>
+      <div>
+        <h1 class="display-font text-lg font-bold text-slate-900">HUMAN CAPITAL & PROBATION GOVERNANCE</h1>
+        <p class="text-xs text-slate-400">ระบบบริหารวงจรพนักงาน • ควบคุมเส้นตาย 119 วัน ม.118 • ป้องกันพนักงานผีมาตรฐาน IPO</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-2">
+      <a href="index.html" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-600 px-3 py-2 rounded-lg font-semibold transition">
+        ← กลับหน้า Admin
+      </a>
+      <button onclick="loadEmployees()" class="text-xs bg-teal-600 hover:bg-teal-700 text-white px-3 py-2 rounded-lg font-semibold transition">
+        🔄 รีเฟรชข้อมูล
+      </button>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto space-y-6">
+
+    <!-- แผงนโยบายความคุ้มครองแรงงาน ม.118 & ประกันสังคม -->
+    <section class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div class="bg-white p-5 rounded-2xl border-2 border-rose-400 shadow-sm space-y-1">
+        <span class="text-[11px] font-bold text-rose-600 uppercase">⚠️ กฎหมายแรงงาน ม.118 (เส้นตาย 120 วัน)</span>
+        <h3 class="display-font text-xl font-black text-slate-900">Hard-Stop ที่ 110 วัน</h3>
+        <p class="text-xs text-slate-500">หากทำงานครบ 120 วันจะเกิดสิทธิ์ค่าชดเชย 30 วันทันที ระบบจะล็อกเตือนก่อน 10 วันเสมอ</p>
+      </div>
+
+      <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-1">
+        <span class="text-[11px] font-bold text-slate-500 uppercase">🛡️ ป้องกันพนักงานผี (Anti-Ghost)</span>
+        <h3 class="display-font text-xl font-black text-slate-900">ID 13 หลักตรงบัญชี 100%</h3>
+        <p class="text-xs text-slate-500">บัญชีรับเงินเดือนต้องตรงกับบัตรประชาชน ห้ามโอนเข้าบัญชีบุคคลอื่นโดยเด็ดขาด</p>
+      </div>
+
+      <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-1">
+        <span class="text-[11px] font-bold text-teal-600 uppercase">📋 ประกันสังคม & ภาษี (SSO Form 1-10)</span>
+        <h3 class="display-font text-xl font-black text-slate-900">สมทบ 5% (สูงสุด ฿750)</h3>
+        <p class="text-xs text-slate-500">คำนวณหักอัตโนมัติพร้อมออกไฟล์ส่ง สปส. e-Service สิ้นเดือน</p>
+      </div>
+    </section>
+
+    <!-- ตารางรายชื่อพนักงานและตัวจับเวลาทดลองงาน -->
+    <section class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+      <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+        <div>
+          <h2 class="display-font font-bold text-base text-slate-900">📋 ทะเบียนพนักงานและตัวนับถอยหลังทดลองงาน (Probation Tracker)</h2>
+          <p class="text-xs text-slate-400">ตรวจสอบสถานะการทำงาน คะแนนประเมิน และการบรรจุอัตโนมัติ</p>
+        </div>
+        <span class="px-3 py-1 bg-emerald-100 text-emerald-800 text-xs font-bold rounded-full">ระบบกำกับแรงงานทำงาน 🟢</span>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs">
+          <thead class="bg-slate-50 text-slate-500 font-bold uppercase border-b border-slate-100">
+            <tr>
+              <th class="p-3">รหัส / ชื่อพนักงาน</th>
+              <th class="p-3">ตำแหน่ง / สาขา</th>
+              <th class="p-3">วันที่เริ่มงาน</th>
+              <th class="p-3">วันครบโปร (119D)</th>
+              <th class="p-3 text-center">เหลือเวลาโปร</th>
+              <th class="p-3 text-center">สถานะ</th>
+              <th class="p-3 text-center">การจัดการ</th>
+            </tr>
+          </thead>
+          <tbody id="employeeTableBody" class="divide-y divide-slate-100"></tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Modal: ประเมินผลงานทดลองงาน (Probation Review) -->
+  <div id="evalModal" class="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl">
+      <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+        <h3 class="font-bold text-slate-900 text-base">📝 บันทึกประเมินผลงาน (Probation Review)</h3>
+        <button onclick="closeEvalModal()" class="text-slate-400 hover:text-slate-600 font-bold text-lg">✕</button>
+      </div>
+      <div class="space-y-3 text-xs">
+        <div>
+          <label class="text-slate-500 block mb-1">รหัสพนักงาน:</label>
+          <input type="text" id="evalEmpCode" readonly class="w-full bg-slate-100 border border-slate-300 rounded-lg p-2 font-mono font-bold">
+        </div>
+        <div>
+          <label class="text-slate-500 block mb-1">รอบการประเมิน:</label>
+          <select id="evalMilestone" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 font-semibold">
+            <option value="DAY_30">รอบ 30 วัน (Basic Skill & Culture)</option>
+            <option value="DAY_60">รอบ 60 วัน (Mid-term Performance)</option>
+            <option value="DAY_90">รอบ 90 วัน (Pre-final Review)</option>
+            <option value="FINAL_110">รอบตัดสิน 110 วัน (Final Decision สู่การบรรจุ)</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-slate-500 block mb-1">คะแนนวินัยและการเข้างาน (0 - 100):</label>
+          <input type="number" id="evalAttendance" value="95" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 font-mono">
+        </div>
+        <div>
+          <label class="text-slate-500 block mb-1">ความแม่นยำในการคิดเงิน/แพ็ก (0 - 100):</label>
+          <input type="number" id="evalAccuracy" value="90" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 font-mono">
+        </div>
+        <div>
+          <label class="text-slate-500 block mb-1">คะแนนบริการและการทำงานร่วมกับทีม (0 - 100):</label>
+          <input type="number" id="evalService" value="85" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 font-mono">
+        </div>
+      </div>
+      <div class="pt-2 flex justify-end gap-2">
+        <button onclick="closeEvalModal()" class="px-4 py-2 bg-slate-100 text-slate-600 rounded-xl font-bold text-xs">ยกเลิก</button>
+        <button onclick="submitEvaluation()" class="px-5 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl font-bold text-xs shadow">บันทึกผลประเมิน</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = window.location.origin.includes('localhost') 
+      ? 'http://localhost:8000' 
+      : 'https://pro-nexus-os-production.up.railway.app';
+
+    async function loadEmployees() {
+      const token = sessionStorage.getItem('admin_passcode') || 'admin1234';
+      const tbody = document.getElementById('employeeTableBody');
+      tbody.innerHTML = `<tr><td colspan="7" class="text-center p-4 text-slate-400">กำลังโหลดข้อมูล...</td></tr>`;
+
+      try {
+        const res = await fetch(`${API_BASE}/api/v1/admin/hr/employees?company=tp_extra`, {
+          headers: { 'x-admin-key': token }
+        });
+        const data = await res.json();
+        if (data.status === 'success') {
+          const emps = data.employees || [];
+          tbody.innerHTML = emps.map(e => {
+            const days = e.days_left_in_probation;
+            const isUrgent = days <= 15 && e.employment_status === 'PROBATION';
+            return `
+              <tr class="hover:bg-slate-50">
+                <td class="p-3 font-bold text-slate-800">
+                  ${e.full_name}
+                  <span class="block font-mono text-[10px] text-slate-400">${e.emp_code}</span>
+                </td>
+                <td class="p-3 text-slate-600">${e.job_position} (${e.branch_id})</td>
+                <td class="p-3 font-mono text-slate-600">${e.hire_date}</td>
+                <td class="p-3 font-mono text-slate-600">${e.probation_end_date}</td>
+                <td class="p-3 text-center">
+                  ${e.employment_status === 'PROBATION' ? `
+                    <span class="px-2.5 py-1 rounded-full font-mono font-bold text-xs ${isUrgent ? 'bg-rose-100 text-rose-700 animate-pulse' : 'bg-amber-100 text-amber-800'}">
+                      เหลือ ${days} วัน ${isUrgent ? '⚠️ ใกล้เส้น 120D' : ''}
+                    </span>
+                  ` : '<span class="text-slate-400">-</span>'}
+                </td>
+                <td class="p-3 text-center">
+                  <span class="px-2.5 py-0.5 rounded-full font-bold text-[11px] ${e.employment_status === 'CONFIRMED' ? 'bg-emerald-100 text-emerald-800' : (e.employment_status === 'PROBATION' ? 'bg-sky-100 text-sky-800' : 'bg-slate-100 text-slate-600')}">
+                    ${e.employment_status}
+                  </span>
+                </td>
+                <td class="p-3 text-center space-x-1">
+                  <button onclick="openEvalModal('${e.emp_code}')" class="bg-teal-50 hover:bg-teal-100 text-teal-800 px-2.5 py-1 rounded text-xs font-semibold transition">
+                    📝 ประเมิน
+                  </button>
+                  <button onclick="offboardEmp('${e.emp_code}')" class="bg-rose-50 hover:bg-rose-100 text-rose-700 px-2 py-1 rounded text-xs font-semibold transition">
+                    ตัดสิทธิ์
+                  </button>
+                </td>
+              </tr>
+            `;
+          }).join('');
+        }
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="7" class="text-center p-4 text-rose-500">โหลดข้อมูลล้มเหลว</td></tr>`;
+      }
+    }
+
+    function openEvalModal(code) {
+      document.getElementById('evalEmpCode').value = code;
+      document.getElementById('evalModal').classList.remove('hidden');
+    }
+    function closeEvalModal() { document.getElementById('evalModal').classList.add('hidden'); }
+
+    async function submitEvaluation() {
+      const token = sessionStorage.getItem('admin_passcode') || 'admin1234';
+      const body = {
+        emp_code: document.getElementById('evalEmpCode').value,
+        milestone: document.getElementById('evalMilestone').value,
+        attendance_score: parseFloat(document.getElementById('evalAttendance').value),
+        accuracy_score: parseFloat(document.getElementById('evalAccuracy').value),
+        service_score: parseFloat(document.getElementById('evalService').value)
+      };
+
+      const res = await fetch(`${API_BASE}/api/v1/admin/hr/evaluate-probation`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-admin-key': token
+        },
+        body: JSON.stringify(body)
+      });
+      const data = await res.json();
+      if (res.ok) {
+        alert(data.message);
+        closeEvalModal();
+        loadEmployees();
+      } else {
+        alert("ข้อผิดพลาด: " + data.detail);
+      }
+    }
+
+    async function offboardEmp(code) {
+      if (!confirm(`ยืนยันการตัดสิทธิ์เข้าระบบและเริ่มกระบวนการพ้นสภาพพนักงาน ${code}?`)) return;
+      const token = sessionStorage.getItem('admin_passcode') || 'admin1234';
+      const today = new Date().toISOString().slice(0, 10);
+
+      const res = await fetch(`${API_BASE}/api/v1/admin/hr/offboard-employee`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-admin-key': token
+        },
+        body: JSON.stringify({
+          emp_code: code,
+          separation_type: 'RESIGNATION',
+          last_working_date: today
+        })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        alert(data.message);
+        loadEmployees();
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', loadEmployees);
+  </script>
+</body>
+</html>

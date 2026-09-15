@@ -756,3 +756,94 @@ def check_compliance_text(payload: ComplianceCheckRequest, admin_key: str = Depe
         "status": "success",
         "result": result
     }
+
+
+class ProbationEvalRequest(BaseModel):
+    emp_code: str
+    milestone: str
+    attendance_score: float
+    accuracy_score: float
+    service_score: float
+    evaluator: str = "MGR-001"
+
+class OffboardRequest(BaseModel):
+    emp_code: str
+    separation_type: str
+    last_working_date: str
+    notes: Optional[str] = "ส่งมอบงานเรียบร้อย"
+
+@router.get("/hr/employees")
+def get_hr_employees(company: str = Query(default="tp_extra"), admin_key: str = Depends(verify_admin_key)):
+    with get_db_connection() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT id, emp_code, company_slug, branch_id, full_name, id_card_no, phone,
+                       DATE_FORMAT(hire_date, '%d/%m/%Y') as hire_date,
+                       DATE_FORMAT(probation_end_date, '%d/%m/%Y') as probation_end_date,
+                       DATEDIFF(probation_end_date, CURDATE()) as days_left_in_probation,
+                       employment_status, job_position, CAST(base_salary AS FLOAT) as base_salary,
+                       bank_name, bank_account_no, CAST(sso_deduction AS FLOAT) as sso_deduction
+                FROM employee_master
+                WHERE company_slug = %s
+                ORDER BY days_left_in_probation ASC;
+                """,
+                (company,)
+            )
+            employees = cursor.fetchall()
+    return {"status": "success", "employees": employees}
+
+@router.post("/hr/evaluate-probation")
+def evaluate_probation(payload: ProbationEvalRequest, admin_key: str = Depends(verify_admin_key)):
+    total = round((payload.attendance_score + payload.accuracy_score + payload.service_score) / 3, 2)
+    result = "PASS" if total >= 75.0 else ("NEEDS_IMPROVEMENT" if total >= 60.0 else "FAIL")
+
+    with get_db_connection() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                """
+                INSERT INTO probation_reviews (
+                    emp_code, milestone, attendance_score, accuracy_score, service_score, total_score, evaluation_result, evaluator
+                )
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s);
+                """,
+                (payload.emp_code, payload.milestone, payload.attendance_score, payload.accuracy_score, payload.service_score, total, result, payload.evaluator)
+            )
+
+            # หากผ่านการประเมินรอบตัดสิน ให้ปรับสถานะเป็นบรรจุ (CONFIRMED)
+            if payload.milestone == "FINAL_110" and result == "PASS":
+                cursor.execute("UPDATE employee_master SET employment_status = 'CONFIRMED' WHERE emp_code = %s;", (payload.emp_code,))
+        conn.commit()
+
+    return {
+        "status": "success",
+        "emp_code": payload.emp_code,
+        "total_score": total,
+        "result": result,
+        "message": f"บันทึกการประเมิน {payload.milestone} สำเร็จ (คะแนนเฉลี่ย: {total}%)"
+    }
+
+@router.post("/hr/offboard-employee")
+def offboard_employee(payload: OffboardRequest, admin_key: str = Depends(verify_admin_key)):
+    with get_db_connection() as conn:
+        with conn.cursor() as cursor:
+            # 1. ระงับสถานะพนักงานทันที (Instant Revocation)
+            new_status = "RESIGNED" if payload.separation_type == "RESIGNATION" else "TERMINATED"
+            cursor.execute("UPDATE employee_master SET employment_status = %s WHERE emp_code = %s;", (new_status, payload.emp_code))
+
+            # 2. บันทึกประวัติการเคลียร์งานและตัดสิทธิ์
+            cursor.execute(
+                """
+                INSERT INTO offboarding_clearances (
+                    emp_code, separation_type, last_working_date, cash_drawer_reconciled, keys_returned, system_access_revoked
+                )
+                VALUES (%s, %s, %s, TRUE, TRUE, TRUE);
+                """,
+                (payload.emp_code, payload.separation_type, payload.last_working_date)
+            )
+        conn.commit()
+
+    return {
+        "status": "success",
+        "message": f"ดำเนินการตัดสิทธิ์เข้าระบบและทำเรื่องพ้นสภาพพนักงาน {payload.emp_code} สำเร็จ"
+    }
