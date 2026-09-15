@@ -1124,3 +1124,78 @@ class ClassifyProductTaxRequest(BaseModel):
 def api_classify_product_tax(payload: ClassifyProductTaxRequest, admin_key: str = Depends(verify_admin_key)):
     result = classify_product_tax(payload.product_name)
     return {"status": "success", "data": result}
+
+
+from backend.app.services.shrinkage_maintenance_service import record_inventory_writeoff, record_asset_maintenance
+
+class WriteOffRequest(BaseModel):
+    sku: str
+    quantity: int
+    reason_type: str
+    witness_emp: str
+    manager_emp: str = "MGR-001"
+    evidence_url: Optional[str] = None
+    police_report: Optional[str] = None
+
+class MaintenanceRequest(BaseModel):
+    asset_name: str
+    cost_amount: float
+    vendor_name: str
+    vendor_tax_id: str
+    invoice_no: str
+    authorized_by: str = "MGR-001"
+    paid_from_fund: str = "BRANCH_UTILITY_RESERVE"
+
+@router.post("/inventory/write-off")
+def api_record_writeoff(payload: WriteOffRequest, admin_key: str = Depends(verify_admin_key)):
+    try:
+        res = record_inventory_writeoff(
+            sku=payload.sku, quantity=payload.quantity, reason_type=payload.reason_type,
+            witness_emp=payload.witness_emp, manager_emp=payload.manager_emp,
+            evidence_url=payload.evidence_url, police_report=payload.police_report
+        )
+        return res
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@router.post("/assets/maintenance")
+def api_record_maintenance(payload: MaintenanceRequest, admin_key: str = Depends(verify_admin_key)):
+    res = record_asset_maintenance(
+        asset_name=payload.asset_name, cost_amount=payload.cost_amount,
+        vendor_name=payload.vendor_name, vendor_tax_id=payload.vendor_tax_id,
+        invoice_no=payload.invoice_no, authorized_by=payload.authorized_by,
+        paid_from_fund=payload.paid_from_fund
+    )
+    return res
+
+@router.get("/shrinkage/summary")
+def get_shrinkage_summary(company: str = Query(default="tp_extra"), admin_key: str = Depends(verify_admin_key)):
+    with get_db_connection() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT id, writeoff_no, sku, product_name, quantity, total_loss_value,
+                       reason_type, tax_treatment, witness_emp_code, manager_authorizer,
+                       DATE_FORMAT(created_at, '%d/%m/%Y %H:%i') as created_at
+                FROM inventory_writeoffs
+                WHERE company_slug = %s
+                ORDER BY id DESC LIMIT 10;
+                """,
+                (company,)
+            )
+            writeoffs = cursor.fetchall()
+
+            cursor.execute(
+                """
+                SELECT id, maint_no, asset_name, cost_amount, wht_deducted_3pct,
+                       vendor_name, invoice_no, paid_from_fund,
+                       DATE_FORMAT(created_at, '%d/%m/%Y') as created_at
+                FROM asset_maintenance_logs
+                WHERE company_slug = %s
+                ORDER BY id DESC LIMIT 10;
+                """,
+                (company,)
+            )
+            maints = cursor.fetchall()
+
+    return {"status": "success", "writeoffs": writeoffs, "maintenances": maints}

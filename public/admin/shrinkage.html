@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Inventory Shrinkage & Maintenance Hub - Pro Nexus OS</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&family=Prompt:wght@500;700;900&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Sarabun', sans-serif; }
+    .display-font { font-family: 'Prompt', sans-serif; }
+  </style>
+</head>
+<body class="bg-slate-100 min-h-screen text-slate-800 p-4 sm:p-8">
+
+  <header class="max-w-6xl mx-auto mb-6 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-4">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-rose-700 flex items-center justify-center text-white text-xl font-black">📦</div>
+      <div>
+        <h1 class="display-font text-lg font-bold text-slate-900">SHRINKAGE WRITE-OFF & MAINTENANCE HUB</h1>
+        <p class="text-xs text-slate-400">ระบบตัดจำหน่ายสินค้าสูญหาย/ชำรุด (ป.79/2541) • บันทึกค่าซ่อมบำรุงหักภาษีถูกต้อง</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-2">
+      <a href="index.html" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-600 px-3 py-2 rounded-lg font-semibold transition">
+        ← กลับหน้า Admin
+      </a>
+      <button onclick="loadSummary()" class="text-xs bg-rose-600 hover:bg-rose-700 text-white px-3 py-2 rounded-lg font-semibold transition">
+        🔄 รีเฟรชข้อมูล
+      </button>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto space-y-6">
+
+    <!-- แผงนโยบายสรรพากร ป.79/2541 -->
+    <section class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+      <div class="bg-white p-5 rounded-2xl border-2 border-emerald-400 shadow-sm space-y-2">
+        <b class="text-emerald-800 text-sm block">🛡️ สินค้าชำรุด/หมดอายุ (คำสั่ง ป.79/2541):</b>
+        <p class="text-slate-600 leading-relaxed">
+          ต้องมี<b>พยานร่วมตรวจสอบ 2 ฝ่าย</b> ถ่ายภาพหลักฐาน และทำลายจริงตามระเบียบ<br>
+          • <b>ผลทางภาษี:</b> ถือเป็น<b>รายจ่ายทางภาษีได้ 100%</b> และ<b>ไม่ต้องเสีย VAT 7%</b> (ไม่ถือเป็นการขาย)
+        </p>
+      </div>
+      <div class="bg-white p-5 rounded-2xl border-2 border-amber-400 shadow-sm space-y-2">
+        <b class="text-amber-800 text-sm block">⚠️ สินค้าสูญหายโดยไม่มีหลักฐาน:</b>
+        <p class="text-slate-600 leading-relaxed">
+          หากสินค้าขาดบัญชีโดยไม่ทราบสาเหตุ สรรพากรจะถือว่า<b>เป็นการขายสินค้า</b> ต้องคำนวณ VAT 7% นำส่ง ภ.พ. 30 ทันที ยกเว้นมีใบแจ้งความดำเนินคดีโจรกรรม
+        </p>
+      </div>
+    </section>
+
+    <!-- กล่องฟอร์ม 2 ฝั่ง: ตัดสต็อกเสีย & บันทึกค่าซ่อม -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+      <!-- ฟอร์ม 1: ตัดจำหน่ายสินค้าเสียหาย/หมดอายุ -->
+      <section class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+        <h3 class="display-font font-bold text-base text-slate-900 flex items-center gap-2">
+          <span>🗑️ บันทึกตัดจำหน่ายสินค้า (Write-Off)</span>
+        </h3>
+        <div class="space-y-3 text-xs">
+          <div>
+            <label class="text-slate-500 block mb-1">รหัสสินค้า SKU:</label>
+            <input type="text" id="wofSku" placeholder="เช่น FOOD-001 หรือ FOOD-COFFEE-01" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 font-mono font-bold">
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="text-slate-500 block mb-1">จำนวนที่ชำรุด/หาย:</label>
+              <input type="number" id="wofQty" value="1" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 font-mono">
+            </div>
+            <div>
+              <label class="text-slate-500 block mb-1">สาเหตุความเสียหาย:</label>
+              <select id="wofReason" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 font-semibold">
+                <option value="EXPIRED">สินค้าหมดอายุ</option>
+                <option value="DAMAGED_IN_TRANSIT">ชำรุดจากการขนส่ง</option>
+                <option value="DEFECTIVE_RETURN">สินค้ามีตำหนิโรงงาน</option>
+                <option value="LOST_STOLEN">สูญหาย/ถูกโจรกรรม</option>
+              </select>
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="text-slate-500 block mb-1">รหัสพนักงานพยานตรวจนับ:</label>
+              <input type="text" id="wofWitness" value="EMP-2026-001" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 font-mono">
+            </div>
+            <div>
+              <label class="text-slate-500 block mb-1">เลขที่ใบแจ้งความ (ถ้ามี):</label>
+              <input type="text" id="wofPolice" placeholder="กรณีถูกขโมย" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 font-mono">
+            </div>
+          </div>
+          <button onclick="submitWriteOff()" class="w-full bg-rose-600 hover:bg-rose-700 text-white font-bold py-2.5 rounded-xl transition shadow">
+            บันทึกตัดสต็อกชำรุด & ลงบัญชีภาษี
+          </button>
+        </div>
+      </section>
+
+      <!-- ฟอร์ม 2: บันทึกค่าซ่อมแซมและบำรุงรักษา -->
+      <section class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+        <h3 class="display-font font-bold text-base text-slate-900 flex items-center gap-2">
+          <span>🔧 บันทึกค่าซ่อมบำรุงรักษา (Maintenance)</span>
+        </h3>
+        <div class="space-y-3 text-xs">
+          <div>
+            <label class="text-slate-500 block mb-1">รายการอุปกรณ์ที่ซ่อมแซม:</label>
+            <input type="text" id="mntAsset" placeholder="เช่น ซ่อมแอร์สาขา, ซ่อมบานเลื่อน, ลิ้นชักเงินสด" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 font-bold">
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="text-slate-500 block mb-1">ยอดค่าซ่อม (บาท):</label>
+              <input type="number" id="mntCost" placeholder="1500" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 font-mono">
+            </div>
+            <div>
+              <label class="text-slate-500 block mb-1">ตัดจ่ายจากกองทุน:</label>
+              <select id="mntFund" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 font-semibold">
+                <option value="BRANCH_UTILITY_RESERVE">กองทุนน้ำไฟสำรองสาขา</option>
+                <option value="PLATFORM_EXPENSE">งบส่วนกลางแพลตฟอร์ม</option>
+              </select>
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="text-slate-500 block mb-1">ชื่อช่าง/ผู้รับเหมา:</label>
+              <input type="text" id="mntVendor" placeholder="หจก. แอร์เย็นดี" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5">
+            </div>
+            <div>
+              <label class="text-slate-500 block mb-1">เลขประจำตัวผู้เสียภาษี 13 หลัก:</label>
+              <input type="text" id="mntTaxId" placeholder="0105550000000" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 font-mono">
+            </div>
+          </div>
+          <button onclick="submitMaintenance()" class="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold py-2.5 rounded-xl transition shadow">
+            บันทึกจ่ายค่าซ่อม & ตัด WHT 3%
+          </button>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- ตารางประวัติบันทึกตัดจำหน่ายสินค้าล่าสุด -->
+    <section class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-3">
+      <h3 class="display-font font-bold text-sm text-slate-900">📋 ประวัติการตัดจำหน่ายสินค้าสูญหาย/ชำรุด (Write-Off Logs)</h3>
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs">
+          <thead class="bg-slate-50 text-slate-500 font-bold uppercase border-b">
+            <tr>
+              <th class="p-3">เลขที่เอกสาร</th>
+              <th class="p-3">สินค้า / SKU</th>
+              <th class="p-3 text-center">จำนวน</th>
+              <th class="p-3">มูลค่าความเสียหาย</th>
+              <th class="p-3">สาเหตุ</th>
+              <th class="p-3">สถานะภาษี</th>
+              <th class="p-3">พยานผู้ตรวจนับ</th>
+            </tr>
+          </thead>
+          <tbody id="writeoffTableBody" class="divide-y divide-slate-100"></tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    const API_BASE = window.location.origin.includes('localhost') 
+      ? 'http://localhost:8000' 
+      : 'https://pro-nexus-os-production.up.railway.app';
+
+    async function loadSummary() {
+      const token = sessionStorage.getItem('admin_passcode') || 'admin1234';
+      try {
+        const res = await fetch(`${API_BASE}/api/v1/admin/shrinkage/summary?company=tp_extra`, {
+          headers: { 'x-admin-key': token }
+        });
+        const data = await res.json();
+        if (data.status === 'success') {
+          renderWriteoffs(data.writeoffs || []);
+        }
+      } catch (err) {}
+    }
+
+    function renderWriteoffs(items) {
+      const tbody = document.getElementById('writeoffTableBody');
+      if (items.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="p-4 text-center text-slate-400">ยังไม่มีประวัติตัดจำหน่ายของเสีย</td></tr>';
+        return;
+      }
+      tbody.innerHTML = items.map(i => `
+        <tr class="hover:bg-slate-50">
+          <td class="p-3 font-mono font-bold text-slate-900">${i.writeoff_no}</td>
+          <td class="p-3"><b>${i.product_name}</b><br><span class="text-[10px] font-mono text-slate-400">${i.sku}</span></td>
+          <td class="p-3 text-center font-mono font-bold">${i.quantity}</td>
+          <td class="p-3 font-mono text-rose-600 font-bold">฿${parseFloat(i.total_loss_value).toFixed(2)}</td>
+          <td class="p-3">${i.reason_type}</td>
+          <td class="p-3">
+            <span class="px-2 py-0.5 rounded text-[10px] font-bold ${i.tax_treatment === 'TAX_DEDUCTIBLE_NO_VAT' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}">
+              ${i.tax_treatment === 'TAX_DEDUCTIBLE_NO_VAT' ? 'หักภาษีได้ ไม่เสีย VAT' : 'ถือเป็นการขาย (มี VAT)'}
+            </span>
+          </td>
+          <td class="p-3 font-mono text-slate-500">${i.witness_emp_code}</td>
+        </tr>
+      `).join('');
+    }
+
+    async function submitWriteOff() {
+      const token = sessionStorage.getItem('admin_passcode') || 'admin1234';
+      const body = {
+        sku: document.getElementById('wofSku').value.trim(),
+        quantity: parseInt(document.getElementById('wofQty').value) || 1,
+        reason_type: document.getElementById('wofReason').value,
+        witness_emp: document.getElementById('wofWitness').value.trim(),
+        police_report: document.getElementById('wofPolice').value.trim() || null
+      };
+
+      if (!body.sku) { alert("กรุณาระบุรหัสสินค้า SKU"); return; }
+
+      const res = await fetch(`${API_BASE}/api/v1/admin/inventory/write-off`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-admin-key': token },
+        body: JSON.stringify(body)
+      });
+      const data = await res.json();
+      if (res.ok) {
+        alert(`ตัดจำหน่ายสำเร็จ!\nรหัส: ${data.writeoff_no}\nสินค้า: ${data.product_name}\nสถานะภาษี: ${data.tax_treatment}`);
+        loadSummary();
+      } else {
+        alert("ข้อผิดพลาด: " + data.detail);
+      }
+    }
+
+    async function submitMaintenance() {
+      const token = sessionStorage.getItem('admin_passcode') || 'admin1234';
+      const body = {
+        asset_name: document.getElementById('mntAsset').value.trim(),
+        cost_amount: parseFloat(document.getElementById('mntCost').value) || 0,
+        vendor_name: document.getElementById('mntVendor').value.trim(),
+        vendor_tax_id: document.getElementById('mntTaxId').value.trim(),
+        invoice_no: 'INV-' + Math.random().toString(36).substring(2, 7).toUpperCase(),
+        paid_from_fund: document.getElementById('mntFund').value
+      };
+
+      if (!body.asset_name || body.cost_amount <= 0) { alert("กรุณาระบุข้อมูลให้ครบถ้วน"); return; }
+
+      const res = await fetch(`${API_BASE}/api/v1/admin/assets/maintenance`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-admin-key': token },
+        body: JSON.stringify(body)
+      });
+      const data = await res.json();
+      if (res.ok) {
+        alert(`บันทึกค่าซ่อมสำเร็จ!\nรหัส: ${data.maint_no}\nตัดจ่ายสุทธิ: ฿${data.net_paid.toLocaleString()}\nหักภาษี 3%: ฿${data.wht_3pct}`);
+        document.getElementById('mntAsset').value = '';
+        document.getElementById('mntCost').value = '';
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', loadSummary);
+  </script>
+</body>
+</html>
