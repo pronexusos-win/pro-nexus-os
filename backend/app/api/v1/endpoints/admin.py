@@ -1930,3 +1930,50 @@ def api_submit_customer_review(payload: SubmitReviewPayload):
         conn.commit()
 
     return {"status": "success", "avg_star": avg_star, "total_reviews": total_cnt, "ai_summary": ai_summary_text}
+
+
+from backend.app.services.cash_pickup_service import (
+    book_branch_cash_pickup, confirm_cash_payout_at_branch, process_no_show_penalties
+)
+
+class CashPickupBookingPayload(BaseModel):
+    creator_code: str = "CR-1088"
+    amount: float = 1000.00
+    branch_code: str = "BRANCH-01"
+    appointment_date: str
+    time_slot: str
+
+class CashPickupVerifyPayload(BaseModel):
+    pickup_code: str
+    otp: str
+    cashier_id: str = "CASHIER-01"
+
+@router.post("/cash-pickup/book")
+def api_book_cash_pickup(payload: CashPickupBookingPayload):
+    try:
+        res = book_branch_cash_pickup(
+            creator_code=payload.creator_code,
+            amount=payload.amount,
+            branch_code=payload.branch_code,
+            appointment_date=payload.appointment_date,
+            time_slot=payload.time_slot
+        )
+        return res
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@router.post("/cash-pickup/verify-payout")
+def api_verify_cash_payout(payload: CashPickupVerifyPayload):
+    try:
+        res = confirm_cash_payout_at_branch(
+            pickup_code=payload.pickup_code,
+            otp_entered=payload.otp,
+            cashier_id=payload.cashier_id
+        )
+        return res
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@router.post("/cash-pickup/cron-no-show-check")
+def api_cron_no_show():
+    return process_no_show_penalties()

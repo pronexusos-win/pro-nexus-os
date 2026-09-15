@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>หนังสือรับรองการหักภาษี ณ ที่จ่าย (มาตรา 50 ทวิ) - Pro Nexus OS</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Sarabun', sans-serif; }
+    @media print {
+      .no-print { display: none !important; }
+      body { background: white; padding: 0; }
+    }
+  </style>
+</head>
+<body class="bg-slate-100 min-h-screen p-4 sm:p-8 text-slate-900">
+
+  <div class="max-w-3xl mx-auto space-y-4">
+    <!-- Header พิมพ์ -->
+    <div class="flex justify-between items-center no-print">
+      <a href="affiliate.html" class="text-xs bg-white border border-slate-300 hover:bg-slate-50 px-3 py-2 rounded-xl font-bold transition">
+        ← กลับหน้ากระเป๋ารายได้
+      </a>
+      <button onclick="window.print()" class="text-xs bg-slate-900 hover:bg-slate-800 text-white font-bold px-4 py-2 rounded-xl transition shadow flex items-center gap-1.5">
+        🖨️ พิมพ์ใบ 50 ทวิ (Print PDF)
+      </button>
+    </div>
+
+    <!-- แผ่นเอกสาร 50 ทวิ -->
+    <div class="bg-white border-2 border-slate-400 p-8 rounded-xl shadow-md space-y-5 text-xs leading-relaxed">
+      <div class="text-center border-b border-slate-300 pb-3 space-y-1">
+        <h1 class="text-base font-bold">หนังสือรับรองการหักภาษี ณ ที่จ่าย</h1>
+        <p class="text-xs text-slate-600">ตามมาตรา 50 ทวิ แห่งประมวลรัษฎากร</p>
+        <div class="flex justify-between text-[11px] pt-2">
+          <span>เลขที่เอกสาร: <b id="certNoDisplay" class="font-mono text-slate-900">กำลังโหลด...</b></span>
+          <span>วันที่ออกเอกสาร: <b id="issueDateDisplay">15/09/2026</b></span>
+        </div>
+      </div>
+
+      <!-- ผู้มีหน้าที่หักภาษี -->
+      <div class="p-3 bg-slate-50 border border-slate-200 rounded-lg space-y-1">
+        <span class="text-[10px] text-slate-500 font-bold block uppercase">1. ผู้มีหน้าที่หักภาษี ณ ที่จ่าย (บริษัทผู้จ่ายเงิน)</span>
+        <p><b>ชื่อ:</b> บริษัท โปร เน็กซัส โอเอส จำกัด (มหาชน)</p>
+        <p><b>เลขประจำตัวผู้เสียภาษีอากร:</b> 0-1055-66000-00-0</p>
+        <p><b>ที่อยู่:</b> 123 อาคารเน็กซัสทาวเวอร์ ถนนสุขุมวิท แขวงคลองเตย เขตคลองเตย กรุงเทพมหานคร 10110</p>
+      </div>
+
+      <!-- ผู้ถูกหักภาษี -->
+      <div class="p-3 bg-slate-50 border border-slate-200 rounded-lg space-y-1">
+        <span class="text-[10px] text-slate-500 font-bold block uppercase">2. ผู้ถูกหักภาษี ณ ที่จ่าย (ครีเอเตอร์ / สมาชิกผู้รับเงิน)</span>
+        <p><b>ชื่อ:</b> <span id="payeeNameDisplay" class="font-bold"></span> (รหัส: <span id="payeeCodeDisplay" class="font-mono"></span>)</p>
+        <p><b>โอนเข้าบัญชี:</b> <span id="bankAccountDisplay"></span></p>
+      </div>
+
+      <!-- ตารางรายการเงินได้พึงประเมิน -->
+      <table class="w-full border-collapse border border-slate-300 text-center">
+        <thead class="bg-slate-100 font-bold">
+          <tr>
+            <th class="border border-slate-300 p-2 text-left">ประเภทเงินได้พึงประเมินที่จ่าย</th>
+            <th class="border border-slate-300 p-2 w-28">วันเดือนปีที่จ่าย</th>
+            <th class="border border-slate-300 p-2 w-28">จำนวนเงินที่จ่าย</th>
+            <th class="border border-slate-300 p-2 w-28">ภาษีที่หักไว้</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="border border-slate-300 p-2 text-left">
+              ค่าตอบแทนการเป็นตัวแทนโฆษณา/นายหน้าขายสินค้า (ม.40 (2))
+            </td>
+            <td id="payDateCol" class="border border-slate-300 p-2">15/09/2026</td>
+            <td id="grossCol" class="border border-slate-300 p-2 font-mono font-bold">฿0.00</td>
+            <td id="taxCol" class="border border-slate-300 p-2 font-mono font-bold text-amber-700">฿0.00</td>
+          </tr>
+          <tr class="bg-slate-50 font-bold">
+            <td colspan="2" class="border border-slate-300 p-2 text-right">รวมเงินภาษีที่หักและนำส่ง (3%):</td>
+            <td id="grossTotalCol" class="border border-slate-300 p-2 font-mono">฿0.00</td>
+            <td id="taxTotalCol" class="border border-slate-300 p-2 font-mono text-amber-700">฿0.00</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="flex justify-between items-center pt-2">
+        <span class="text-xs">จำนวนเงินสุทธิหลังหักภาษีที่โอน: <b id="netPayoutDisplay" class="text-emerald-700 text-sm font-mono">฿0.00</b></span>
+        <span class="text-[11px] text-slate-500">ออกโดยระบบสารสนเทศอัตโนมัติ Pro Nexus OS</span>
+      </div>
+
+      <!-- ลายมือชื่อ -->
+      <div class="pt-8 flex justify-end">
+        <div class="text-center space-y-2 w-56">
+          <div class="border-b border-slate-400 pb-8 font-mono text-[11px] text-slate-400">ประทับตรายางอิเล็กทรอนิกส์</div>
+          <p class="text-[11px]">ผู้จ่ายเงิน / ผู้มีอำนาจลงนาม</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = window.location.origin.includes('localhost') ? 'http://localhost:8000' : 'https://pro-nexus-os-production.up.railway.app';
+    const params = new URLSearchParams(window.location.search);
+    const certNo = params.get('cert') || 'WHT50-2026-0001';
+
+    async function loadCert() {
+      try {
+        const res = await fetch(`${API_BASE}/api/v1/admin/affiliate/tax-cert/${certNo}`);
+        const data = await res.json();
+        if (data.status === 'success') {
+          const c = data.tax_cert;
+          document.getElementById('certNoDisplay').innerText = c.cert_no;
+          document.getElementById('payeeNameDisplay').innerText = c.payee_name;
+          document.getElementById('payeeCodeDisplay').innerText = c.creator_code;
+          document.getElementById('bankAccountDisplay').innerText = `${c.bank_name} เลขที่ ${c.bank_account_no}`;
+          document.getElementById('grossCol').innerText = `฿${parseFloat(c.payment_amount).toFixed(2)}`;
+          document.getElementById('grossTotalCol').innerText = `฿${parseFloat(c.payment_amount).toFixed(2)}`;
+          document.getElementById('taxCol').innerText = `฿${parseFloat(c.tax_deducted).toFixed(2)}`;
+          document.getElementById('taxTotalCol').innerText = `฿${parseFloat(c.tax_deducted).toFixed(2)}`;
+          const net = parseFloat(c.payment_amount) - parseFloat(c.tax_deducted);
+          document.getElementById('netPayoutDisplay').innerText = `฿${net.toFixed(2)}`;
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }
+    window.addEventListener('DOMContentLoaded', loadCert);
+  </script>
+</body>
+</html>
