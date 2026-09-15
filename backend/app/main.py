@@ -23,11 +23,7 @@ app.add_middleware(
 DB_HOST = os.getenv("MYSQLHOST", os.getenv("DB_HOST", "127.0.0.1"))
 DB_PORT = int(os.getenv("MYSQLPORT", os.getenv("DB_PORT", 3306)))
 DB_USER = os.getenv("MYSQLUSER", os.getenv("DB_USER", "root"))
-DB_PASSWORD = os.getenv(
-    "MYSQLPASSWORD",
-    os.getenv(
-        "DB_PASSWORD",
-        "rootpassword"))
+DB_PASSWORD = os.getenv("MYSQLPASSWORD", os.getenv("DB_PASSWORD", "rootpassword"))
 DB_NAME = os.getenv("MYSQLDATABASE", os.getenv("DB_NAME", "railway"))
 
 
@@ -283,8 +279,7 @@ def pos_checkout(req: POSCheckoutRequest):
                 stock_row = cursor.fetchone()
                 if not stock_row or stock_row["stock_quantity"] < item.quantity:
                     raise HTTPException(
-                        status_code=400, detail=f"สินค้า {
-                            item.product_id} ในสต็อกไม่เพียงพอ")
+                        status_code=400, detail=f"สินค้า {item.product_id} ในสต็อกไม่เพียงพอ")
 
                 cursor.execute(
                     "UPDATE branch_stocks SET stock_quantity = stock_quantity - %s WHERE company_id = %s AND branch_id = %s AND product_id = %s",
