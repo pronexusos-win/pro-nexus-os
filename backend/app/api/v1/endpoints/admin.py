@@ -1357,3 +1357,71 @@ def api_scan_pickup(payload: PickupScanRequest, admin_key: str = Depends(verify_
 def api_process_unclaimed(branch_id: str = "HEADQUARTER", company: str = "tp_extra", admin_key: str = Depends(verify_admin_key)):
     res = process_unclaimed_orders(branch_id=branch_id, company_slug=company)
     return res
+
+
+from backend.app.services.stock_transfer_service import (
+    create_stock_transfer_manifest, verify_and_receive_transfer
+)
+
+class CreateTransferRequest(BaseModel):
+    origin_branch: str = "HEADQUARTER"
+    destination_branch: str = "BRANCH-02"
+    sku: str
+    lot_no: str
+    quantity: int
+    sender_emp: str = "MGR-001"
+    unit_weight: float = 150.0
+
+class VerifyReceiveTransferRequest(BaseModel):
+    transfer_no: str
+    actual_weight_grams: float
+    receiver_emp: str = "MGR-BRANCH02"
+
+@router.get("/transfer/list")
+def get_transfer_manifests(company: str = Query(default="tp_extra"), admin_key: str = Depends(verify_admin_key)):
+    with get_db_connection() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT st.id, st.transfer_no, st.origin_branch_id, st.destination_branch_id,
+                       st.expected_weight_grams, st.actual_received_weight_grams,
+                       st.weight_discrepancy_pct, st.sender_emp_code, st.receiver_emp_code,
+                       st.transfer_status,
+                       DATE_FORMAT(st.dispatched_at, '%d/%m/%Y %H:%i') as dispatched_at,
+                       DATE_FORMAT(st.received_at, '%d/%m/%Y %H:%i') as received_at,
+                       sti.sku, sti.lot_no, sti.quantity
+                FROM stock_transfers st
+                LEFT JOIN stock_transfer_items sti ON st.transfer_no = sti.transfer_no
+                WHERE st.company_slug = %s
+                ORDER BY st.id DESC LIMIT 15;
+                """,
+                (company,)
+            )
+            transfers = cursor.fetchall()
+    return {"status": "success", "transfers": transfers}
+
+@router.post("/transfer/dispatch")
+def api_dispatch_transfer(payload: CreateTransferRequest, admin_key: str = Depends(verify_admin_key)):
+    try:
+        res = create_stock_transfer_manifest(
+            origin_branch=payload.origin_branch,
+            destination_branch=payload.destination_branch,
+            sku=payload.sku, lot_no=payload.lot_no,
+            quantity=payload.quantity, sender_emp=payload.sender_emp,
+            unit_weight=payload.unit_weight
+        )
+        return res
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@router.post("/transfer/receive-verify")
+def api_verify_receive_transfer(payload: VerifyReceiveTransferRequest, admin_key: str = Depends(verify_admin_key)):
+    try:
+        res = verify_and_receive_transfer(
+            transfer_no=payload.transfer_no,
+            actual_weight_grams=payload.actual_weight_grams,
+            receiver_emp=payload.receiver_emp
+        )
+        return res
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))

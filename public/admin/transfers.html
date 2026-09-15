@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Inter-Branch Stock Transfer & Weight Verification - Pro Nexus OS</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&family=Prompt:wght@500;700;900&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Sarabun', sans-serif; }
+    .display-font { font-family: 'Prompt', sans-serif; }
+  </style>
+</head>
+<body class="bg-slate-100 min-h-screen text-slate-800 p-4 sm:p-8">
+
+  <header class="max-w-6xl mx-auto mb-6 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-4">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-cyan-700 flex items-center justify-center text-white text-xl font-black">🚚</div>
+      <div>
+        <h1 class="display-font text-lg font-bold text-slate-900">INTER-BRANCH TRANSFER & WEIGHT VERIFICATION</h1>
+        <p class="text-xs text-slate-400">ระบบควบคุมโอนย้ายสต็อกข้ามสาขา • ด่านตรวจน้ำหนัก ±3% • สกัดสินค้าสูญหายระหว่างทาง</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-2">
+      <a href="index.html" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-600 px-3 py-2 rounded-lg font-semibold transition">
+        ← กลับหน้า Admin
+      </a>
+      <button onclick="loadTransfers()" class="text-xs bg-cyan-700 hover:bg-cyan-800 text-white font-bold px-3 py-2 rounded-lg transition">
+        🔄 รีเฟรชสถานะ
+      </button>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto space-y-6">
+
+    <!-- ฟอร์มสร้างใบโอนย้าย และ ด่านตรวจชั่งน้ำหนัก -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+      <!-- ฝั่งต้นทาง: เปิดใบโอนย้าย -->
+      <section class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+        <h3 class="display-font font-bold text-base text-slate-900 flex items-center gap-2">
+          <span>📤 ส่งพัสดุออก (Dispatch Manifest)</span>
+        </h3>
+        <div class="space-y-3 text-xs">
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="text-slate-500 block mb-1">สาขาต้นทาง:</label>
+              <input type="text" id="trfOrigin" value="HEADQUARTER" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 font-mono font-bold">
+            </div>
+            <div>
+              <label class="text-slate-500 block mb-1">สาขาปลายทาง:</label>
+              <input type="text" id="trfDest" value="BRANCH-02" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 font-mono font-bold">
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="text-slate-500 block mb-1">รหัสสินค้า SKU:</label>
+              <input type="text" id="trfSku" value="FOOD-COFFEE-01" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 font-mono font-bold">
+            </div>
+            <div>
+              <label class="text-slate-500 block mb-1">เลขล็อตสินค้า (Lot No.):</label>
+              <input type="text" id="trfLot" value="LOT-2026-A1" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 font-mono font-bold">
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="text-slate-500 block mb-1">จำนวนที่โอน (ชิ้น):</label>
+              <input type="number" id="trfQty" value="20" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 font-mono">
+            </div>
+            <div>
+              <label class="text-slate-500 block mb-1">น้ำหนักต่อหน่วย (กรัม):</label>
+              <input type="number" id="trfUnitWeight" value="150" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 font-mono">
+            </div>
+          </div>
+          <button onclick="submitDispatch()" class="w-full bg-cyan-700 hover:bg-cyan-800 text-white font-bold py-2.5 rounded-xl transition shadow">
+            ออกใบโอนย้าย & ส่งพัสดุเข้าสถานะ IN_TRANSIT
+          </button>
+        </div>
+      </section>
+
+      <!-- ฝั่งปลายทาง: ชั่งน้ำหนักตรวจรับ -->
+      <section class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+        <h3 class="display-font font-bold text-base text-slate-900 flex items-center gap-2">
+          <span>⚖️ ด่านตรวจชั่งน้ำหนักรับพัสดุ (Weight Verification Gate)</span>
+        </h3>
+        <p class="text-xs text-slate-400">สาขาปลายทางต้องวางกล่องพัสดุบนเครื่องชั่งดิจิทัลก่อนกดยอมรับ หากน้ำหนักคลาดเคลื่อนเกิน ±3% ระบบจะล็อกเพื่อสอบสวน</p>
+        <div class="space-y-3 text-xs">
+          <div>
+            <label class="text-slate-500 block mb-1">เลขที่ใบโอนย้าย (Transfer No.):</label>
+            <input type="text" id="verifyTrfNo" placeholder="เช่น TRF-2026-001" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 font-mono font-bold">
+          </div>
+          <div>
+            <label class="text-slate-500 block mb-1">น้ำหนักจริงที่ชั่งได้บนตาชั่ง (กรัม):</label>
+            <input type="number" id="verifyWeight" placeholder="เช่น 4480.00" class="w-full bg-slate-50 border border-cyan-400 rounded-lg p-2.5 font-mono font-bold text-lg text-cyan-900">
+          </div>
+          <button onclick="submitVerifyReceive()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-xl transition shadow">
+            ✓ ตรวจสอบน้ำหนัก & บันทึกเข้าสต็อกสาขา
+          </button>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- ตารางติดตามสถานะใบโอนย้ายพัสดุ -->
+    <section class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-3">
+      <h3 class="display-font font-bold text-sm text-slate-900">📋 รายการใบโอนย้ายสต็อกระหว่างสาขา (Transfer Manifest Log)</h3>
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs">
+          <thead class="bg-slate-50 text-slate-500 font-bold uppercase border-b">
+            <tr>
+              <th class="p-3">เลขที่ใบโอนย้าย</th>
+              <th class="p-3">เส้นทาง (ต้นทาง ➔ ปลายทาง)</th>
+              <th class="p-3">สินค้า / ล็อต</th>
+              <th class="p-3 text-center">จำนวน</th>
+              <th class="p-3">น้ำหนักมาตรฐาน</th>
+              <th class="p-3">น้ำหนักชั่งจริง</th>
+              <th class="p-3 text-center">สถานะ</th>
+            </tr>
+          </thead>
+          <tbody id="transferTableBody" class="divide-y divide-slate-100"></tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    const API_BASE = window.location.origin.includes('localhost') 
+      ? 'http://localhost:8000' 
+      : 'https://pro-nexus-os-production.up.railway.app';
+
+    async function loadTransfers() {
+      const token = sessionStorage.getItem('admin_passcode') || 'admin1234';
+      try {
+        const res = await fetch(`${API_BASE}/api/v1/admin/transfer/list?company=tp_extra`, {
+          headers: { 'x-admin-key': token }
+        });
+        const data = await res.json();
+        if (data.status === 'success') {
+          renderTransfers(data.transfers || []);
+        }
+      } catch (err) {}
+    }
+
+    function renderTransfers(transfers) {
+      const tbody = document.getElementById('transferTableBody');
+      if (transfers.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="p-4 text-center text-slate-400">ไม่มีรายการโอนย้ายพัสดุ</td></tr>';
+        return;
+      }
+      tbody.innerHTML = transfers.map(t => {
+        const isVerified = t.transfer_status === 'RECEIVED_VERIFIED';
+        const isDiscrepancy = t.transfer_status === 'DISCREPANCY_FLAGGED';
+
+        return `
+          <tr class="hover:bg-slate-50 ${isDiscrepancy ? 'bg-rose-50/50' : ''}">
+            <td class="p-3 font-mono font-bold text-slate-900">${t.transfer_no}</td>
+            <td class="p-3 font-semibold">${t.origin_branch_id} ➔ <span class="text-cyan-700">${t.destination_branch_id}</span></td>
+            <td class="p-3 font-mono">${t.sku}<br><span class="text-[10px] text-slate-400">${t.lot_no}</span></td>
+            <td class="p-3 text-center font-mono font-bold">${t.quantity} ชิ้น</td>
+            <td class="p-3 font-mono text-slate-700">${parseFloat(t.expected_weight_grams).toFixed(1)} g</td>
+            <td class="p-3 font-mono">
+              ${t.actual_received_weight_grams ? `
+                <span class="${isDiscrepancy ? 'text-rose-600 font-bold' : 'text-emerald-700 font-bold'}">
+                  ${parseFloat(t.actual_received_weight_grams).toFixed(1)} g (ต่าง ${t.weight_discrepancy_pct}%)
+                </span>
+              ` : '<span class="text-slate-400">รอชั่งรับ</span>'}
+            </td>
+            <td class="p-3 text-center">
+              <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold ${isVerified ? 'bg-emerald-100 text-emerald-800' : (isDiscrepancy ? 'bg-rose-100 text-rose-800 animate-pulse' : 'bg-amber-100 text-amber-800')}">
+                ${isVerified ? 'รับเข้าสมบูรณ์ 🟢' : (isDiscrepancy ? 'น้ำหนักคลาดเคลื่อน 🔴' : 'อยู่ระหว่างขนส่ง 🚚')}
+              </span>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    async function submitDispatch() {
+      const token = sessionStorage.getItem('admin_passcode') || 'admin1234';
+      const body = {
+        origin_branch: document.getElementById('trfOrigin').value.trim(),
+        destination_branch: document.getElementById('trfDest').value.trim(),
+        sku: document.getElementById('trfSku').value.trim(),
+        lot_no: document.getElementById('trfLot').value.trim(),
+        quantity: parseInt(document.getElementById('trfQty').value) || 1,
+        unit_weight: parseFloat(document.getElementById('trfUnitWeight').value) || 150.0
+      };
+
+      const res = await fetch(`${API_BASE}/api/v1/admin/transfer/dispatch`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-admin-key': token },
+        body: JSON.stringify(body)
+      });
+      const data = await res.json();
+      if (res.ok) {
+        alert(`${data.message}\nน้ำหนักมาตรฐานที่ต้องตรวจ: ${data.expected_weight_grams} กรัม`);
+        loadTransfers();
+      } else {
+        alert("ข้อผิดพลาด: " + data.detail);
+      }
+    }
+
+    async function submitVerifyReceive() {
+      const token = sessionStorage.getItem('admin_passcode') || 'admin1234';
+      const trfNo = document.getElementById('verifyTrfNo').value.trim();
+      const weight = parseFloat(document.getElementById('verifyWeight').value) || 0;
+
+      if (!trfNo || weight <= 0) { alert("กรุณาระบุเลขที่ใบโอนและน้ำหนักจริง"); return; }
+
+      const res = await fetch(`${API_BASE}/api/v1/admin/transfer/receive-verify`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-admin-key': token },
+        body: JSON.stringify({ transfer_no: trfNo, actual_weight_grams: weight })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        alert(data.message);
+        loadTransfers();
+      } else {
+        alert("ข้อผิดพลาด: " + data.detail);
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', loadTransfers);
+  </script>
+</body>
+</html>
