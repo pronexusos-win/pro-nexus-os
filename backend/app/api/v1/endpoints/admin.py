@@ -956,3 +956,41 @@ def close_daily_ledger(payload: CloseDailyLedgerRequest, admin_key: str = Depend
         "message": f"ปิดรอบบัญชีและล็อกยอดประจำวัน {today} สาขา {payload.branch_id} สำเร็จเรียบร้อย",
         "gross_sales": sales["gross_total"]
     }
+
+
+from backend.app.services.tax_compliance_service import generate_monthly_tax_summary, export_etax_xml_template
+
+@router.get("/tax/monthly-summary")
+def get_tax_monthly_summary(
+    year: int = Query(default=datetime.now().year),
+    month: int = Query(default=datetime.now().month),
+    company: str = Query(default="tp_extra"),
+    admin_key: str = Depends(verify_admin_key)
+):
+    summary = generate_monthly_tax_summary(year, month, company_slug=company)
+    return {"status": "success", "data": summary}
+
+@router.get("/tax/export-etax-xml")
+def download_etax_xml(order_no: str, admin_key: str = Depends(verify_admin_key)):
+    with get_db_connection() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT order_no, platform_net_gp, platform_vat_amount, company_slug
+                FROM order_financial_splits
+                WHERE order_no = %s;
+                """,
+                (order_no,)
+            )
+            row = cursor.fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="ไม่พบข้อมูลบิลสำหรับออกใบกำกับภาษี")
+
+    xml_text = export_etax_xml_template(
+        doc_number=f"TAX-{row['order_no']}",
+        seller_tax_id="0105559998881",
+        buyer_tax_id="0105500000000",
+        amount=float(row["platform_net_gp"]),
+        vat=float(row["platform_vat_amount"])
+    )
+    return Response(content=xml_text, media_type="application/xml")
