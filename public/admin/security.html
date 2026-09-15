@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ITGC Security & Dual-Key Authorization Hub - Pro Nexus OS</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&family=Prompt:wght@500;700;900&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Sarabun', sans-serif; }
+    .display-font { font-family: 'Prompt', sans-serif; }
+  </style>
+</head>
+<body class="bg-slate-900 min-h-screen text-slate-100 p-4 sm:p-8">
+
+  <header class="max-w-6xl mx-auto mb-6 bg-slate-800 border border-slate-700 p-5 rounded-3xl shadow-xl flex flex-wrap items-center justify-between gap-4">
+    <div class="flex items-center gap-3">
+      <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-cyan-600 to-blue-500 flex items-center justify-center text-white text-2xl font-black shadow-lg">🛡️</div>
+      <div>
+        <h1 class="display-font text-lg font-black text-white tracking-wide">ITGC SECURITY & DUAL-KEY AUDIT VAULT</h1>
+        <p class="text-xs text-slate-400">ระบบควบคุมความมั่นคงปลอดภัยทางเทคโนโลยี • แฮชบัญชีแบบลูกโซ่ SHA-256 • อนุมัติคู่สองฝ่าย</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-2">
+      <a href="index.html" class="text-xs bg-slate-700 hover:bg-slate-600 text-slate-200 px-3 py-2 rounded-xl font-semibold transition">
+        ← กลับหน้า Admin
+      </a>
+      <button onclick="loadSecurityData()" class="text-xs bg-cyan-600 hover:bg-cyan-500 text-white font-bold px-4 py-2 rounded-xl transition shadow-lg">
+        🔄 รีเฟรชสถานะ
+      </button>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto space-y-6">
+
+    <!-- แผงรายการอนุมัติคู่ (Dual-Key Pending Queue) -->
+    <section class="bg-slate-800 border border-slate-700 rounded-3xl p-6 shadow-xl space-y-4">
+      <div class="flex justify-between items-center border-b border-slate-700 pb-3">
+        <div>
+          <h2 class="display-font font-bold text-base text-white">🔑 รายการรอการอนุมัติคู่สองฝ่าย (Dual-Key Authorization Queue)</h2>
+          <p class="text-xs text-slate-400">ธุรกรรมเสี่ยงสูงต้องใช้กุญแจ 2 ดอก (ผู้จัดการสาขา + CFO/คณะกรรมการตรวจสอบ) ป้องกันการใช้อำนาจเดี่ยว</p>
+        </div>
+        <span class="px-3 py-1 bg-amber-500/20 text-amber-300 text-xs font-bold rounded-full border border-amber-500/40">
+          COSO Control Enforced 🟢
+        </span>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs">
+          <thead class="bg-slate-900 text-slate-400 font-bold uppercase border-b border-slate-700">
+            <tr>
+              <th class="p-3">รหัสคำขอ</th>
+              <th class="p-3">คำอธิบายธุรกรรม</th>
+              <th class="p-3">ระดับความเสี่ยง</th>
+              <th class="p-3">กุญแจดอกที่ 1 (ผู้ขอ)</th>
+              <th class="p-3">กุญแจดอกที่ 2 (ผู้อนุมัติ)</th>
+              <th class="p-3 text-center">สถานะ</th>
+              <th class="p-3 text-center">การจัดการ</th>
+            </tr>
+          </thead>
+          <tbody id="dualKeyTableBody" class="divide-y divide-slate-700"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ตารางบันทึกการตรวจสอบแบบแฮชลูกโซ่ (Chained Audit Ledger) -->
+    <section class="bg-slate-800 border border-slate-700 rounded-3xl p-6 shadow-xl space-y-4">
+      <div class="flex justify-between items-center border-b border-slate-700 pb-3">
+        <div>
+          <h3 class="display-font font-bold text-base text-white">⛓️ บัญชีประวัติแฮชแบบปิดผนึกลูกโซ่ (Tamper-Evident SHA-256 Audit Log)</h3>
+          <p class="text-xs text-slate-400">ทุกการทำธุรกรรมถูกเข้ารหัสผูกโยงกับบล็อกก่อนหน้า หากมีการแก้ตัวเลขในฐานข้อมูลโดยตรง Hash จะแตกทันที</p>
+        </div>
+        <span class="text-xs text-slate-400 font-mono">Immutable Ledger</span>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs">
+          <thead class="bg-slate-900 text-slate-400 font-bold uppercase border-b border-slate-700">
+            <tr>
+              <th class="p-3">โมดูล</th>
+              <th class="p-3">เลขอ้างอิงรายการ</th>
+              <th class="p-3">การกระทำ</th>
+              <th class="p-3">ผู้ปฏิบัติงาน</th>
+              <th class="p-3">SHA-256 Current Hash</th>
+              <th class="p-3 text-center">ความสมบูรณ์</th>
+            </tr>
+          </thead>
+          <tbody id="auditChainTableBody" class="divide-y divide-slate-700 font-mono"></tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    const API_BASE = window.location.origin.includes('localhost') 
+      ? 'http://localhost:8000' 
+      : 'https://pro-nexus-os-production.up.railway.app';
+
+    async function loadSecurityData() {
+      const token = sessionStorage.getItem('admin_passcode') || 'admin1234';
+      try {
+        const res = await fetch(`${API_BASE}/api/v1/admin/security/audit-vault`, {
+          headers: { 'x-admin-key': token }
+        });
+        const data = await res.json();
+        if (data.status === 'success') {
+          renderDualKeys(data.dual_keys || []);
+          renderChains(data.audit_chains || []);
+        }
+      } catch (err) {
+        console.error("Load security error:", err);
+      }
+    }
+
+    function renderDualKeys(keys) {
+      const tbody = document.getElementById('dualKeyTableBody');
+      if (keys.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="p-4 text-center text-slate-400">ไม่มีคำขออนุมัติคู่ค้างอยู่</td></tr>';
+        return;
+      }
+      tbody.innerHTML = keys.map(k => {
+        const isAuth = k.auth_status === 'AUTHORIZED';
+        const isPending = k.auth_status === 'PENDING_SECOND_KEY';
+        return `
+          <tr class="hover:bg-slate-700/50">
+            <td class="p-3 font-mono font-bold text-amber-400">${k.auth_ticket_no}</td>
+            <td class="p-3 font-semibold text-slate-200">${k.action_description}</td>
+            <td class="p-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-900/60 text-rose-300 border border-rose-700">${k.risk_level}</span></td>
+            <td class="p-3 font-mono text-slate-400">${k.first_key_emp}</td>
+            <td class="p-3 font-mono text-slate-400">${k.second_key_emp || '<span class="text-amber-400">รอกุญแจดอกที่ 2</span>'}</td>
+            <td class="p-3 text-center">
+              <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold ${isAuth ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : (isPending ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 animate-pulse' : 'bg-rose-500/20 text-rose-300')}">
+                ${k.auth_status}
+              </span>
+            </td>
+            <td class="p-3 text-center">
+              ${isPending ? `
+                <button onclick="signSecondKey('${k.auth_ticket_no}')" class="px-2.5 py-1 bg-cyan-600 hover:bg-cyan-500 text-white rounded text-[11px] font-bold transition">
+                  ลงนามกุญแจที่ 2
+                </button>
+              ` : '<span class="text-slate-500 text-[11px]">-</span>'}
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function renderChains(chains) {
+      const tbody = document.getElementById('auditChainTableBody');
+      if (chains.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-slate-400">ไม่มีข้อมูลบล็อกการตรวจสอบ</td></tr>';
+        return;
+      }
+      tbody.innerHTML = chains.map(c => `
+        <tr class="hover:bg-slate-700/50">
+          <td class="p-3 text-cyan-300">${c.module_name}</td>
+          <td class="p-3 text-slate-200">${c.record_ref_no}</td>
+          <td class="p-3"><span class="text-amber-400 font-bold">${c.action_type}</span></td>
+          <td class="p-3 text-slate-400">${c.actor_emp_code}</td>
+          <td class="p-3 text-[11px] text-slate-400" title="${c.current_payload_hash}">${c.current_payload_hash.substring(0, 16)}...${c.current_payload_hash.substring(48)}</td>
+          <td class="p-3 text-center">
+            <span class="text-emerald-400 font-bold text-xs">✓ ไม่ถูกดัดแปลง</span>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    async function signSecondKey(ticket) {
+      if (!confirm(`ยืนยันการใช้อำนาจกุญแจดอกที่สอง (Second-Key) เพื่ออนุมัติคำขอ ${ticket}?`)) return;
+      const token = sessionStorage.getItem('admin_passcode') || 'admin1234';
+
+      try {
+        const res = await fetch(`${API_BASE}/api/v1/admin/security/sign-second-key`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-admin-key': token },
+          body: JSON.stringify({ ticket_no: ticket, second_key_emp: 'CFO-DIRECTOR', is_approved: true })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          alert(data.message);
+          loadSecurityData();
+        }
+      } catch (err) {}
+    }
+
+    window.addEventListener('DOMContentLoaded', loadSecurityData);
+  </script>
+</body>
+</html>

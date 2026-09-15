@@ -1702,3 +1702,57 @@ def api_process_dsr(payload: ProcessDsrRequest, admin_key: str = Depends(verify_
         dpo_notes=payload.dpo_notes
     )
     return res
+
+
+from backend.app.services.itgc_security_service import record_audit_chain_entry, request_dual_key_authorization
+
+class SignSecondKeyRequest(BaseModel):
+    ticket_no: str
+    second_key_emp: str = "CFO-DIRECTOR"
+    is_approved: bool = True
+
+@router.get("/security/audit-vault")
+def api_get_audit_vault(admin_key: str = Depends(verify_admin_key)):
+    with get_db_connection() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT id, module_name, record_ref_no, action_type, actor_emp_code,
+                       current_payload_hash, tamper_verified,
+                       DATE_FORMAT(created_at, '%d/%m/%Y %H:%i:%s') as created_at
+                FROM system_audit_chains
+                ORDER BY id DESC LIMIT 15;
+                """
+            )
+            chains = cursor.fetchall()
+
+            cursor.execute(
+                """
+                SELECT auth_ticket_no, action_description, risk_level, target_module,
+                       first_key_emp, second_key_emp, auth_status,
+                       DATE_FORMAT(created_at, '%d/%m/%Y %H:%i') as created_at
+                FROM dual_key_authorizations
+                ORDER BY id DESC LIMIT 10;
+                """
+            )
+            dual_keys = cursor.fetchall()
+
+    return {"status": "success", "audit_chains": chains, "dual_keys": dual_keys}
+
+@router.post("/security/sign-second-key")
+def api_sign_second_key(payload: SignSecondKeyRequest, admin_key: str = Depends(verify_admin_key)):
+    new_status = "AUTHORIZED" if payload.is_approved else "REJECTED"
+    with get_db_connection() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                """
+                UPDATE dual_key_authorizations
+                SET second_key_emp = %s,
+                    auth_status = %s,
+                    authorized_at = NOW()
+                WHERE auth_ticket_no = %s AND auth_status = 'PENDING_SECOND_KEY';
+                """,
+                (payload.second_key_emp, new_status, payload.ticket_no)
+            )
+        conn.commit()
+    return {"status": "success", "message": f"ลงนามกุญแจดอกที่สองคำขอ {payload.ticket_no} เป็นสถานะ {new_status} สำเร็จ"}
