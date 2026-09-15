@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Smart POS - ระบบแคชเชียร์และรับชำระเงินพร้อมเพย์</title>
+  <title>Smart POS - ระบบแคชเชียร์หน้าร้าน & ป้องกันทุจริต</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&family=Prompt:wght@500;700;900&display=swap" rel="stylesheet">
@@ -20,34 +20,37 @@
       <span class="text-2xl">🏪</span>
       <div>
         <h1 class="display-font text-lg font-bold text-white tracking-wide">BAENGPUN SMART POS</h1>
-        <p class="text-xs text-slate-400">ระบบแคชเชียร์หน้าร้าน • พร้อมเพย์ 085-116-2629</p>
+        <p class="text-xs text-slate-400">ระบบแคชเชียร์ • ความปลอดภัยสองฝ่าย (Zero-Trust) • พร้อมเพย์ 085-116-2629</p>
       </div>
     </div>
     <div class="flex items-center gap-3">
-      <button onclick="testSpeech()" class="text-xs bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded-lg text-slate-200 transition flex items-center gap-1.5">
-        🔊 ทดสอบเสียงลำโพง
+      <button onclick="openBlindShiftModal()" class="text-xs bg-amber-500/20 border border-amber-500/40 hover:bg-amber-500/30 text-amber-300 px-3 py-1.5 rounded-lg font-bold transition flex items-center gap-1.5">
+        🔒 ปิดกะส่งเงินสดตาบอด
+      </button>
+      <button onclick="openVoidModal()" class="text-xs bg-rose-500/20 border border-rose-500/40 hover:bg-rose-500/30 text-rose-300 px-3 py-1.5 rounded-lg font-bold transition flex items-center gap-1.5">
+        🚫 ยกเลิกบิล (สิทธิสองฝ่าย)
       </button>
       <a href="index.html" class="text-xs bg-slate-800 hover:bg-slate-700 border border-slate-600 px-3 py-1.5 rounded-lg text-slate-300 transition">
-        ← กลับหน้า Admin
+        ← แอดมิน
       </a>
     </div>
   </header>
 
-  <!-- Main POS Interface -->
+  <!-- Main POS Grid -->
   <main class="flex-1 max-w-6xl w-full mx-auto p-4 sm:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
 
-    <!-- ฝั่งซ้าย: แป้นคิดเงินและเลือกสินค้า (7 Cols) -->
+    <!-- แป้นคิดเงินและคำนวณเงินทอน (7 Cols) -->
     <div class="lg:col-span-7 bg-slate-800 border border-slate-700 rounded-3xl p-6 flex flex-col justify-between shadow-xl">
       <div>
         <div class="flex justify-between items-center mb-4">
           <span class="text-xs font-bold uppercase text-slate-400">รายการคิดเงินหน้าร้าน</span>
           <span class="text-xs text-emerald-400 font-semibold bg-emerald-950/60 border border-emerald-800 px-2.5 py-1 rounded-full">
-            ● ระบบตัดแบ่งเงินอัตโนมัติ เปิดใช้งาน
+            ● ระบบการันตีซัพพลายเออร์ & น้ำไฟ ทำงาน
           </span>
         </div>
 
-        <!-- รายการสินค้าด่วน -->
-        <div class="grid grid-cols-2 gap-3 mb-6">
+        <!-- รายการด่วน -->
+        <div class="grid grid-cols-2 gap-3 mb-4">
           <button onclick="setAmount(590, 'เซตบำรุงผิวพรีเมียม')" class="p-4 bg-slate-900/80 hover:bg-slate-700/80 border border-slate-700 hover:border-emerald-500 rounded-2xl text-left transition flex flex-col justify-between">
             <span class="font-bold text-sm text-slate-200">เซตบำรุงผิวพรีเมียม</span>
             <span class="display-font text-lg font-bold text-emerald-400 mt-2">฿590.00</span>
@@ -58,77 +61,147 @@
           </button>
         </div>
 
-        <!-- ช่องกรอกยอดเงินตามสั่ง -->
-        <div class="space-y-2">
-          <label class="text-xs text-slate-400 font-semibold">หรือระบุยอดเงินเอง (บาท):</label>
-          <div class="relative">
-            <input type="number" id="customAmountInput" placeholder="0.00" step="0.50" 
-              class="w-full bg-slate-950 border border-slate-700 rounded-2xl px-5 py-4 text-3xl font-mono font-bold text-white focus:outline-none focus:border-emerald-400">
-            <button onclick="setCustomAmount()" class="absolute right-3 top-3 bottom-3 bg-emerald-600 hover:bg-emerald-500 px-6 rounded-xl font-bold text-sm text-white transition">
-              ตั้งยอด
-            </button>
+        <!-- กล่องคำนวณเงินสด & เงินทอน -->
+        <div class="bg-slate-950/70 border border-slate-700 rounded-2xl p-4 space-y-3">
+          <span class="text-xs font-bold text-slate-400 block">💵 เครื่องคิดเงินทอนสด (Cash Change):</span>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="text-[11px] text-slate-500">รับเงินสดมา (บาท):</label>
+              <input type="number" id="cashReceivedInput" oninput="calculateChange()" placeholder="เช่น 1000" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-lg font-mono font-bold text-white focus:outline-none focus:border-emerald-400">
+            </div>
+            <div>
+              <label class="text-[11px] text-slate-500">เงินทอนที่ต้องคืน:</label>
+              <div id="changeDisplay" class="text-2xl font-mono font-black text-amber-400 pt-1">฿0.00</div>
+            </div>
           </div>
         </div>
       </div>
 
-      <!-- สรุปการตัดแบ่งเงินของบิลปัจจุบัน (Preview) -->
+      <!-- สรุปการจัดสรรเงิน 5 กองแบบ Real-time -->
       <div class="mt-6 p-4 bg-slate-950/60 border border-slate-700/80 rounded-2xl space-y-2 text-xs">
-        <span class="text-slate-400 font-bold block mb-1">📊 โครงสร้างตัดแบ่งเงินอัตโนมัติ (Automated Split):</span>
+        <span class="text-slate-400 font-bold block mb-1">🏛️ จัดสรร 5 กองทุน (Financial Splits):</span>
         <div class="grid grid-cols-4 gap-2 text-center pt-1">
-          <div class="bg-slate-900 p-2 rounded-lg border border-slate-800">
-            <span class="text-slate-400 text-[10px] block">ทุนสินค้า (60%)</span>
-            <b id="previewCost" class="text-slate-200 text-xs">฿0.00</b>
+          <div class="bg-slate-900 p-2 rounded-lg border border-emerald-900/50">
+            <span class="text-slate-400 text-[10px] block">ซัพพลายเออร์ (65%)</span>
+            <b id="previewSup" class="text-emerald-400 text-xs">฿0.00</b>
           </div>
           <div class="bg-slate-900 p-2 rounded-lg border border-slate-800">
-            <span class="text-slate-400 text-[10px] block">หน้าร้าน/แพ็ก (10%)</span>
-            <b id="previewShop" class="text-slate-200 text-xs">฿0.00</b>
+            <span class="text-slate-400 text-[10px] block">สาขา (12%)</span>
+            <b id="previewBranch" class="text-slate-200 text-xs">฿0.00</b>
           </div>
-          <div class="bg-slate-900 p-2 rounded-lg border border-slate-800">
-            <span class="text-slate-400 text-[10px] block">แต้มสมาชิก (5%)</span>
-            <b id="previewPoints" class="text-emerald-400 text-xs">฿0.00</b>
+          <div class="bg-slate-900 p-2 rounded-lg border border-sky-900/50">
+            <span class="text-slate-400 text-[10px] block">น้ำไฟ (3%)</span>
+            <b id="previewUtil" class="text-sky-400 text-xs">฿0.00</b>
           </div>
-          <div class="bg-slate-900 p-2 rounded-lg border border-slate-800">
-            <span class="text-slate-400 text-[10px] block">กำไรสุทธิ (25%)</span>
-            <b id="previewProfit" class="text-indigo-400 text-xs">฿0.00</b>
+          <div class="bg-slate-900 p-2 rounded-lg border border-indigo-900/50">
+            <span class="text-slate-400 text-[10px] block">แพลตฟอร์ม (15%)</span>
+            <b id="previewPlat" class="text-indigo-400 text-xs">฿0.00</b>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- ฝั่งขวา: จอแสดงผล QR พร้อมเพย์ให้ลูกค้าสแกน (5 Cols) -->
+    <!-- จอแสดงผล QR พร้อมเพย์ (5 Cols) -->
     <div class="lg:col-span-5 bg-white text-slate-900 rounded-3xl p-6 flex flex-col justify-between items-center text-center shadow-2xl border-4 border-slate-700">
       <div class="w-full">
-        <!-- Thai QR Payment Banner -->
-        <div class="bg-[#003b71] text-white py-2.5 px-4 rounded-xl flex items-center justify-between mb-4 shadow-sm">
+        <div class="bg-[#003b71] text-white py-2 px-4 rounded-xl flex items-center justify-between mb-4 shadow-sm">
           <span class="display-font text-xs font-black tracking-wider">THAI QR PAYMENT</span>
           <span class="text-[10px] text-sky-200 font-bold">PROMPTPAY</span>
         </div>
 
         <span class="text-xs text-slate-500 font-semibold uppercase tracking-wider">ยอดชำระสุทธิ</span>
         <h2 id="posTotalDisplay" class="display-font text-4xl font-black text-slate-900 mt-1">฿590.00</h2>
-        <p class="text-xs font-bold text-slate-600 mt-1">พร้อมเพย์: 085-116-2629 (ทีพี เอ็กซ์ตร้า)</p>
+        <p class="text-xs font-bold text-slate-600 mt-1">พร้อมเพย์: 085-116-2629</p>
 
-        <!-- QR Canvas -->
         <div class="my-4 p-3 bg-slate-50 border-2 border-slate-200 rounded-2xl inline-block shadow-inner">
           <canvas id="posQrCanvas" class="mx-auto"></canvas>
         </div>
 
-        <!-- สถานะการตรวจเงินเข้า -->
         <div id="paymentStatusBox" class="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-2">
           <span class="animate-ping w-2 h-2 rounded-full bg-amber-500"></span>
-          <span>รอรับเงินโอนจากลูกค้า...</span>
+          <span>รอรับเงินโอน / เงินสดจากลูกค้า...</span>
         </div>
       </div>
 
-      <!-- ปุ่มจำลอง/ยืนยันการรับเงิน -->
-      <div class="w-full pt-4 border-t border-slate-100 flex gap-2">
-        <button onclick="simulateCustomerPaid()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl shadow-lg transition text-xs flex items-center justify-center gap-2">
-          <span>✅ ยืนยันรับเงิน (จำลองเงินเข้า)</span>
+      <div class="w-full pt-4 border-t border-slate-100">
+        <button onclick="confirmCashPayment()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl shadow-lg transition text-xs flex items-center justify-center gap-2">
+          <span>✅ บันทึกรับเงิน & ลำโพงขานยอด</span>
         </button>
       </div>
     </div>
 
   </main>
+
+  <!-- Modal 1: ปิดกะส่งเงินสดตาบอด (Blind Cash Shift) -->
+  <div id="blindShiftModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-slate-900 border border-slate-700 rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl text-slate-200">
+      <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+        <h3 class="font-bold text-white text-base">🔒 ปิดกะนับเงินสดตาบอด (Blind Cash Reconciliation)</h3>
+        <button onclick="closeBlindShiftModal()" class="text-slate-400 hover:text-white font-bold">✕</button>
+      </div>
+      <p class="text-xs text-slate-400 leading-relaxed">
+        * ระบบไม่แสดงยอดขายในระบบ แคชเชียร์และพยานต้องนับเงินสดจริงใส่ซองส่งเข้าตู้เซฟ หากมีผลต่างเกิน ฿20.00 ระบบจะส่งตรวจสอบทันที
+      </p>
+
+      <div class="space-y-2 text-xs">
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="text-slate-400 block mb-1">รหัสพนักงานแคชเชียร์:</label>
+            <input type="text" id="shiftCashierId" value="CASHIER-01" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 font-mono text-white">
+          </div>
+          <div>
+            <label class="text-slate-400 block mb-1">รหัสพยานร่วมตรวจ:</label>
+            <input type="text" id="shiftWitnessId" placeholder="เช่น EMP-02" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 font-mono text-white">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2 pt-2">
+          <div><label>แบงก์ 1,000 (ใบ):</label><input type="number" id="b1000" class="w-full bg-slate-950 border border-slate-700 rounded p-1.5 font-mono text-white"></div>
+          <div><label>แบงก์ 500 (ใบ):</label><input type="number" id="b500" class="w-full bg-slate-950 border border-slate-700 rounded p-1.5 font-mono text-white"></div>
+          <div><label>แบงก์ 100 (ใบ):</label><input type="number" id="b100" class="w-full bg-slate-950 border border-slate-700 rounded p-1.5 font-mono text-white"></div>
+          <div><label>แบงก์ 50 (ใบ):</label><input type="number" id="b50" class="w-full bg-slate-950 border border-slate-700 rounded p-1.5 font-mono text-white"></div>
+          <div><label>แบงก์ 20 (ใบ):</label><input type="number" id="b20" class="w-full bg-slate-950 border border-slate-700 rounded p-1.5 font-mono text-white"></div>
+          <div><label>เศษเหรียญรวม (บาท):</label><input type="number" id="coins" class="w-full bg-slate-950 border border-slate-700 rounded p-1.5 font-mono text-white"></div>
+        </div>
+      </div>
+
+      <button onclick="submitBlindShift()" class="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold py-2.5 rounded-xl transition text-xs shadow-lg">
+        ยื่นยอดปิดกะและบันทึกผล
+      </button>
+    </div>
+  </div>
+
+  <!-- Modal 2: อนุมัติยกเลิกบิลสองฝ่าย (Dual-Auth Void) -->
+  <div id="voidModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-slate-900 border border-slate-700 rounded-3xl max-w-sm w-full p-6 space-y-4 shadow-2xl text-slate-200">
+      <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+        <h3 class="font-bold text-rose-400 text-base">🚫 อนุมัติยกเลิกบิล (Dual-Auth)</h3>
+        <button onclick="closeVoidModal()" class="text-slate-400 hover:text-white font-bold">✕</button>
+      </div>
+      <p class="text-xs text-slate-400">
+        การยกเลิกบิลต้องได้รับการอนุมัติจากผู้จัดการสาขา และจะถูกบันทึกลง Audit Log ย้อนกลับไม่ได้
+      </p>
+
+      <div class="space-y-3 text-xs">
+        <div>
+          <label class="text-slate-400 block mb-1">รหัสออเดอร์ที่ต้องการยกเลิก:</label>
+          <input type="text" id="voidOrderNo" placeholder="เช่น ORD-XXXXXX" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 font-mono text-white">
+        </div>
+        <div>
+          <label class="text-slate-400 block mb-1">เหตุผลในการยกเลิก:</label>
+          <input type="text" id="voidReason" placeholder="ลูกค้าเปลี่ยนใจ / สินค้าชำรุด" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-white">
+        </div>
+        <div>
+          <label class="text-rose-400 block mb-1 font-bold">รหัสผ่านผู้จัดการ (Manager Passcode):</label>
+          <input type="password" id="managerPasscode" placeholder="ป้อนรหัสผู้จัดการ (9999)" class="w-full bg-slate-950 border border-rose-500/50 rounded-lg p-2 font-mono text-center text-lg text-white">
+        </div>
+      </div>
+
+      <button onclick="submitVoidOrder()" class="w-full bg-rose-600 hover:bg-rose-700 text-white font-bold py-2.5 rounded-xl transition text-xs shadow-lg">
+        ยืนยันการอนุมัติยกเลิกบิล
+      </button>
+    </div>
+  </div>
 
   <script>
     const API_BASE = window.location.origin.includes('localhost') 
@@ -136,10 +209,9 @@
       : 'https://pro-nexus-os-production.up.railway.app';
 
     let currentAmount = 590.00;
-    let currentOrderNo = "POS-" + Math.random().toString(36).substring(2, 8).toUpperCase();
-    let pollInterval = null;
+    let currentOrderNo = "ORD-" + Math.random().toString(36).substring(2, 8).toUpperCase();
 
-    // 1. ฟังก์ชันคำนวณ CRC16-CCITT และ EMVCo String
+    // 1. EMVCo & QR Code
     function crc16(data) {
       let crc = 0xFFFF;
       for (let i = 0; i < data.length; i++) {
@@ -154,109 +226,145 @@
 
     function buildPromptPayPayload(target, amount) {
       const clean = target.replace(/[^0-9]/g, "");
-      const formattedTarget = "0066" + clean.substring(1);
-      const subTag = "01" + ("00" + formattedTarget.length).slice(-2) + formattedTarget;
+      const formatted = "0066" + clean.substring(1);
+      const subTag = "01" + ("00" + formatted.length).slice(-2) + formatted;
       const aid = "A000000677010111";
-      const tag29Val = "00" + ("00" + aid.length).slice(-2) + aid + subTag;
-      const tag29 = "29" + ("00" + tag29Val.length).slice(-2) + tag29Val;
+      const tag29 = "29" + ("00" + (aid.length + 4 + subTag.length)).slice(-2) + "0016" + aid + subTag;
       const amtStr = Number(amount).toFixed(2);
       const tag54 = "54" + ("00" + amtStr.length).slice(-2) + amtStr;
-
       let payload = "000201010212" + tag29 + "5303764" + tag54 + "5802TH6304";
       return payload + crc16(payload);
     }
 
-    // 2. ระบบเสียงภาษาไทย (Web Speech API)
-    function speakThai(amount, customerName = "สมาชิก") {
+    // 2. ระบบเสียงภาษาไทย (TTS)
+    function speakThai(text) {
       if (!('speechSynthesis' in window)) return;
-      window.speechSynthesis.cancel(); // ตัดเสียงค้างก่อนหน้า
-
-      const speechText = `เงินเข้าแล้วค่ะ ยอดเงิน ${amount} บาทถ้วน ได้รับแต้มสะสมเรียบร้อย คุณลูกค้า${customerName}โปรดตรวจสอบใบเสร็จและรายการสินค้าก่อนออกจากร้านนะคะ ขอบคุณที่ใช้บริการค่ะ`;
-
-      const utterance = new SpeechSynthesisUtterance(speechText);
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = 'th-TH';
       utterance.rate = 0.95;
-      utterance.pitch = 1.0;
       window.speechSynthesis.speak(utterance);
     }
 
-    function testSpeech() {
-      speakThai(currentAmount, "สมาชิก");
-    }
-
-    // 3. ปรับยอดเงินและสร้าง QR ใหม่
     function setAmount(amt, name) {
       currentAmount = amt;
-      currentOrderNo = "POS-" + Math.random().toString(36).substring(2, 8).toUpperCase();
+      currentOrderNo = "ORD-" + Math.random().toString(36).substring(2, 8).toUpperCase();
       renderPOS();
+      calculateChange();
     }
 
-    function setCustomAmount() {
-      const val = parseFloat(document.getElementById('customAmountInput').value);
-      if (isNaN(val) || val <= 0) {
-        alert("กรุณาระบุจำนวนเงินที่ถูกต้อง");
-        return;
-      }
-      setAmount(val, "สินค้าทั่วไป");
+    function calculateChange() {
+      const rec = parseFloat(document.getElementById('cashReceivedInput').value) || 0;
+      const change = rec >= currentAmount ? rec - currentAmount : 0;
+      document.getElementById('changeDisplay').innerText = `฿${change.toFixed(2)}`;
     }
 
     function renderPOS() {
       document.getElementById('posTotalDisplay').innerText = `฿${currentAmount.toFixed(2)}`;
       
-      // อัปเดตตาราง Preview การแบ่งเงิน
-      document.getElementById('previewCost').innerText = `฿${(currentAmount * 0.60).toFixed(2)}`;
-      document.getElementById('previewShop').innerText = `฿${(currentAmount * 0.10).toFixed(2)}`;
-      document.getElementById('previewPoints').innerText = `฿${(currentAmount * 0.05).toFixed(2)}`;
-      document.getElementById('previewProfit').innerText = `฿${(currentAmount * 0.25).toFixed(2)}`;
+      // อัปเดต 5 กองทุน
+      document.getElementById('previewSup').innerText = `฿${(currentAmount * 0.65).toFixed(2)}`;
+      document.getElementById('previewBranch').innerText = `฿${(currentAmount * 0.12).toFixed(2)}`;
+      document.getElementById('previewUtil').innerText = `฿${(currentAmount * 0.03).toFixed(2)}`;
+      document.getElementById('previewPlat').innerText = `฿${(currentAmount * 0.15).toFixed(2)}`;
 
-      // วาด QR Code
       const payload = buildPromptPayPayload("0851162629", currentAmount);
       QRCode.toCanvas(document.getElementById('posQrCanvas'), payload, {
         width: 220,
         margin: 1,
         color: { dark: '#003b71', light: '#ffffff' }
       });
-
-      // รีเซ็ตกล่องสถานะ
-      const statusBox = document.getElementById('paymentStatusBox');
-      statusBox.className = "bg-amber-50 border border-amber-200 text-amber-800 px-4 py-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-2";
-      statusBox.innerHTML = `
-        <span class="animate-ping w-2 h-2 rounded-full bg-amber-500"></span>
-        <span>รอรับเงินโอนจากลูกค้า (${currentOrderNo})...</span>
-      `;
     }
 
-    // 4. จำลอง/ยืนยันการรับเงิน
-    async function simulateCustomerPaid() {
-      const statusBox = document.getElementById('paymentStatusBox');
-      statusBox.className = "bg-emerald-100 border border-emerald-300 text-emerald-900 px-4 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2";
-      statusBox.innerHTML = `<span>🎉 ชำระเงินสำเร็จ ฿${currentAmount.toFixed(2)} บาท</span>`;
+    async function confirmCashPayment() {
+      const rec = parseFloat(document.getElementById('cashReceivedInput').value) || currentAmount;
+      const change = rec >= currentAmount ? rec - currentAmount : 0;
 
-      // ส่งเสียงพูดออกลำโพงหน้าร้านทันที
-      speakThai(currentAmount, "สมาชิก");
+      // ลำโพงขานยอดรับเงินและเงินทอน
+      const speech = `รับเงินมา ${rec} บาท เงินทอน ${change} บาทถ้วน ได้รับแต้มสะสมเรียบร้อย คุณลูกค้าสมาชิกโปรดตรวจสอบใบเสร็จและรายการสินค้าก่อนออกจากร้านนะคะ ขอบคุณค่ะ`;
+      speakThai(speech);
 
-      // ยิงสร้างและตัดแบ่งเงินเข้าฐานข้อมูล
       try {
         await fetch(`${API_BASE}/api/v1/orders/`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             company_slug: 'tp_extra',
-            line_user_id: 'WALK_IN_CUSTOMER',
+            line_user_id: 'POS_CASH_CUSTOMER',
             total_amount: currentAmount,
-            customer_name: 'ลูกค้าหน้าร้าน (Walk-in)',
-            customer_phone: '-',
+            customer_name: 'ลูกค้าหน้าร้าน',
             shipping_address: 'รับสินค้าที่สาขาหน้าร้าน'
           })
         });
-      } catch (err) {
-        console.warn("Offline fallback");
+      } catch (err) {}
+
+      document.getElementById('cashReceivedInput').value = '';
+      calculateChange();
+      setAmount(590, "เซตบำรุงผิวพรีเมียม");
+    }
+
+    // Modal Blind Shift
+    function openBlindShiftModal() { document.getElementById('blindShiftModal').classList.remove('hidden'); }
+    function closeBlindShiftModal() { document.getElementById('blindShiftModal').classList.add('hidden'); }
+
+    async function submitBlindShift() {
+      const witness = document.getElementById('shiftWitnessId').value;
+      if (!witness) { alert("ต้องมีรหัสพยานร่วมตรวจนับเงิน"); return; }
+
+      const body = {
+        cashier_emp_code: document.getElementById('shiftCashierId').value,
+        witness_emp_code: witness,
+        b1000: parseInt(document.getElementById('b1000').value) || 0,
+        b500: parseInt(document.getElementById('b500').value) || 0,
+        b100: parseInt(document.getElementById('b100').value) || 0,
+        b50: parseInt(document.getElementById('b50').value) || 0,
+        b20: parseInt(document.getElementById('b20').value) || 0,
+        coins: parseFloat(document.getElementById('coins').value) || 0
+      };
+
+      const res = await fetch(`${API_BASE}/api/v1/admin/security/close-shift-blind`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      const data = await res.json();
+      if (res.ok) {
+        alert(`ปิดกะสำเร็จ!\nยอดเงินสดนับจริง: ฿${data.declared_total.toLocaleString()}\nส่วนต่าง (Variance): ฿${data.variance.toFixed(2)}${data.is_investigation_required ? '\n⚠️ มียอดคลาดเคลื่อนเกินเกณฑ์ ส่งรายงานตรวจสอบแล้ว' : ''}`);
+        closeBlindShiftModal();
       }
     }
 
-    window.addEventListener('DOMContentLoaded', () => {
-      renderPOS();
-    });
+    // Modal Dual-Auth Void
+    function openVoidModal() { document.getElementById('voidModal').classList.remove('hidden'); }
+    function closeVoidModal() { document.getElementById('voidModal').classList.add('hidden'); }
+
+    async function submitVoidOrder() {
+      const orderNo = document.getElementById('voidOrderNo').value.trim();
+      const reason = document.getElementById('voidReason').value.trim();
+      const pass = document.getElementById('managerPasscode').value.trim();
+
+      if (!orderNo || !pass) { alert("กรุณากรอกข้อมูลให้ครบถ้วน"); return; }
+
+      const res = await fetch(`${API_BASE}/api/v1/admin/security/authorize-void`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          order_no: orderNo,
+          reason: reason || "ลูกค้ายกเลิก",
+          manager_passcode: pass,
+          cashier_emp_code: "CASHIER-01"
+        })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        alert(data.message);
+        closeVoidModal();
+      } else {
+        alert("ข้อผิดพลาด: " + data.detail);
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', renderPOS);
   </script>
 </body>
 </html>

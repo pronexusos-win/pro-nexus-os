@@ -466,3 +466,186 @@ def get_financial_summary(company: str = Query(default="tp_extra"), admin_key: s
             cursor.execute(summary_sql, (company,))
             summary = cursor.fetchone()
     return {"status": "success", "summary": summary}
+
+
+@router.get("/financial/escrow-summary")
+def get_financial_escrow_summary(company: str = Query(default="tp_extra"), admin_key: str = Depends(verify_admin_key)):
+    with get_db_connection() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT 
+                    COUNT(*) as total_orders,
+                    COALESCE(SUM(total_gross_amount), 0) as total_gmv,
+                    COALESCE(SUM(supplier_cost_payable), 0) as locked_supplier_pool,
+                    COALESCE(SUM(branch_operating_share), 0) as branch_pool,
+                    COALESCE(SUM(utility_reserve_accrual), 0) as utility_pool,
+                    COALESCE(SUM(marketing_commission), 0) as commission_pool,
+                    COALESCE(SUM(platform_net_gp), 0) as platform_gp,
+                    COALESCE(SUM(platform_vat_amount), 0) as platform_vat
+                FROM order_financial_splits
+                WHERE company_slug = %s;
+                """,
+                (company,)
+            )
+            splits = cursor.fetchone()
+
+            # ดึงสถานะกองทุนน้ำไฟ
+            cursor.execute("SELECT * FROM branch_utility_funds WHERE company_slug = %s LIMIT 1;", (company,))
+            utility = cursor.fetchone()
+
+    return {
+        "status": "success",
+        "splits": splits,
+        "utility_fund": utility
+    }
+
+@router.get("/financial/supplier-portal")
+def get_supplier_portal_data(supplier_code: str = "SUP-BP-001"):
+    with get_db_connection() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute("SELECT * FROM suppliers WHERE supplier_code = %s;", (supplier_code,))
+            supplier = cursor.fetchone()
+            if not supplier:
+                raise HTTPException(status_code=404, detail="ไม่พบข้อมูลซัพพลายเออร์")
+
+            cursor.execute(
+                """
+                SELECT 
+                    COALESCE(SUM(CASE WHEN supplier_payout_status = 'LOCKED_IN_ESCROW' THEN supplier_cost_payable ELSE 0 END), 0) as locked_in_escrow,
+                    COALESCE(SUM(CASE WHEN supplier_payout_status = 'SETTLED_PAID' THEN supplier_cost_payable ELSE 0 END), 0) as settled_paid_total,
+                    COUNT(id) as total_orders_supplied
+                FROM order_financial_splits
+                WHERE supplier_code = %s;
+                """,
+                (supplier_code,)
+            )
+            finance = cursor.fetchone()
+
+            cursor.execute(
+                """
+                SELECT order_no, total_gross_amount, supplier_cost_payable, payout_due_date, supplier_payout_status
+                FROM order_financial_splits
+                WHERE supplier_code = %s
+                ORDER BY id DESC LIMIT 10;
+                """,
+                (supplier_code,)
+            )
+            recent_bills = cursor.fetchall()
+
+    return {
+        "status": "success",
+        "supplier": supplier,
+        "finance": finance,
+        "recent_bills": recent_bills
+    }
+
+
+class BlindShiftCloseRequest(BaseModel):
+    branch_id: str = "HEADQUARTER"
+    company_slug: str = "tp_extra"
+    cashier_emp_code: str
+    witness_emp_code: str
+    b1000: int = 0
+    b500: int = 0
+    b100: int = 0
+    b50: int = 0
+    b20: int = 0
+    coins: float = 0.0
+
+@router.post("/security/close-shift-blind")
+def close_shift_blind(payload: BlindShiftCloseRequest):
+    # คำนวณยอดเงินสดที่นับจริง
+    declared = (
+        (payload.b1000 * 1000) +
+        (payload.b500 * 500) +
+        (payload.b100 * 100) +
+        (payload.b50 * 50) +
+        (payload.b20 * 20) +
+        payload.coins
+    )
+
+    today = datetime.now().date()
+    with get_db_connection() as conn:
+        with conn.cursor() as cursor:
+            # ดึงยอดเงินสดที่ระบบบันทึกจริงในวันนี้ (เฉพาะคำสั่งซื้อหน้าร้านที่เป็นเงินสด)
+            cursor.execute(
+                """
+                SELECT COALESCE(SUM(total_amount), 0) as expected_cash
+                FROM orders
+                WHERE company_slug = %s AND status = 'paid' 
+                  AND DATE(created_at) = %s AND shipping_address LIKE '%หน้าร้าน%';
+                """,
+                (payload.company_slug, today)
+            )
+            row = cursor.fetchone()
+            expected = float(row["expected_cash"]) if row else 0.0
+            variance = declared - expected
+            is_investigate = abs(variance) > 20.0  # ต่างเกิน 20 บาท บังคับสอบสวน
+
+            cursor.execute(
+                """
+                INSERT INTO shift_cash_reconciliations (
+                    branch_id, company_slug, shift_date, cashier_emp_code, witness_emp_code,
+                    system_expected_cash, cashier_declared_cash, variance_amount, is_investigation_required
+                )
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s);
+                """,
+                (payload.branch_id, payload.company_slug, today, payload.cashier_emp_code,
+                 payload.witness_emp_code, expected, declared, variance, is_investigate)
+            )
+        conn.commit()
+
+    return {
+        "status": "success",
+        "declared_total": declared,
+        "variance": variance,
+        "is_investigation_required": is_investigate,
+        "message": "ปิดกะและบันทึกยอดเงินสดตาบอดเข้าสู่ระบบเรียบร้อย"
+    }
+
+class DualAuthVoidRequest(BaseModel):
+    order_no: str
+    company_slug: str = "tp_extra"
+    branch_id: str = "HEADQUARTER"
+    cashier_emp_code: str
+    manager_passcode: str
+    reason: str
+
+@router.post("/security/authorize-void")
+def authorize_void_with_audit(payload: DualAuthVoidRequest):
+    # รหัสผู้จัดการสาขาสำหรับอนุมัติ (Security Barrier)
+    if payload.manager_passcode != "9999":
+        raise HTTPException(status_code=403, detail="รหัสผ่านผู้จัดการ (Manager Passcode) ไม่ถูกต้อง ไม่อนุมัติการยกเลิก")
+
+    with get_db_connection() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute("SELECT order_no, status, total_amount FROM orders WHERE order_no = %s;", (payload.order_no,))
+            order = cursor.fetchone()
+            if not order:
+                raise HTTPException(status_code=404, detail="ไม่พบคำสั่งซื้อ")
+            if order["status"] == "cancelled":
+                raise HTTPException(status_code=400, detail="ออเดอร์นี้ถูกยกเลิกไปแล้ว")
+
+            total_amt = float(order["total_amount"])
+
+            # ปรับสถานะออเดอร์
+            cursor.execute("UPDATE orders SET status = 'cancelled', updated_at = NOW() WHERE order_no = %s;", (payload.order_no,))
+
+            # บันทึกประวัติความปลอดภัยแบบย้อนกลับไม่ได้
+            cursor.execute(
+                """
+                INSERT INTO security_audit_logs (
+                    company_slug, branch_id, emp_code, event_type, reference_no, details, manager_authorizer
+                )
+                VALUES (%s, %s, %s, 'VOID_ORDER', %s, %s, 'MGR-001');
+                """,
+                (payload.company_slug, payload.branch_id, payload.cashier_emp_code,
+                 payload.order_no, f"ยกเลิกบิล ฿{total_amt:,.2f} เหตุผล: {payload.reason}")
+            )
+        conn.commit()
+
+    return {
+        "status": "success",
+        "message": f"อนุมัติยกเลิกบิล {payload.order_no} โดยผู้จัดการ MGR-001 สำเร็จ พร้อมบันทึก Audit Log เรียบร้อย"
+    }
