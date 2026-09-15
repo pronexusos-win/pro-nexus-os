@@ -1541,3 +1541,93 @@ def api_record_rpt_transaction(payload: RecordRptRequest, admin_key: str = Depen
         company_slug=payload.company_slug
     )
     return res
+
+
+from backend.app.services.whistleblower_service import (
+    submit_whistleblower_report, track_case_progress
+)
+
+class SubmitReportRequest(BaseModel):
+    category: str
+    location: str
+    title: str
+    description: str
+    evidence_url: Optional[str] = None
+    is_anonymous: bool = True
+    contact_info: Optional[str] = None
+    company_slug: str = "tp_extra"
+
+class TrackReportRequest(BaseModel):
+    case_token: str
+    passcode: str
+    company_slug: str = "tp_extra"
+
+class UpdateCaseResolutionRequest(BaseModel):
+    case_token: str
+    new_status: str
+    committee_notes: str
+    investigator_name: str = "AUDIT_COMMITTEE"
+
+@router.post("/whistleblower/submit")
+def api_submit_whistleblower(payload: SubmitReportRequest):
+    res = submit_whistleblower_report(
+        category=payload.category,
+        location=payload.location,
+        title=payload.title,
+        description=payload.description,
+        evidence_url=payload.evidence_url,
+        is_anonymous=payload.is_anonymous,
+        contact_info=payload.contact_info,
+        company_slug=payload.company_slug
+    )
+    return res
+
+@router.post("/whistleblower/track")
+def api_track_whistleblower(payload: TrackReportRequest):
+    try:
+        res = track_case_progress(
+            case_token=payload.case_token,
+            passcode=payload.passcode,
+            company_slug=payload.company_slug
+        )
+        return res
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@router.get("/whistleblower/cases-board")
+def api_get_whistleblower_cases(company: str = Query(default="tp_extra"), admin_key: str = Depends(verify_admin_key)):
+    with get_db_connection() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT case_token, category, incident_location, subject_title, description,
+                       evidence_url, is_anonymous, whistleblower_contact, status,
+                       audit_committee_notes, investigated_by,
+                       DATE_FORMAT(created_at, '%d/%m/%Y %H:%i') as created_at,
+                       DATE_FORMAT(resolved_at, '%d/%m/%Y') as resolved_at
+                FROM whistleblower_cases
+                WHERE company_slug = %s
+                ORDER BY id DESC;
+                """,
+                (company,)
+            )
+            cases = cursor.fetchall()
+    return {"status": "success", "cases": cases}
+
+@router.post("/whistleblower/update-resolution")
+def api_update_case_resolution(payload: UpdateCaseResolutionRequest, admin_key: str = Depends(verify_admin_key)):
+    with get_db_connection() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                """
+                UPDATE whistleblower_cases
+                SET status = %s,
+                    audit_committee_notes = %s,
+                    investigated_by = %s,
+                    resolved_at = NOW()
+                WHERE case_token = %s;
+                """,
+                (payload.new_status, payload.committee_notes, payload.investigator_name, payload.case_token)
+            )
+        conn.commit()
+    return {"status": "success", "message": f"อัปเดตผลการพิจารณาคดี {payload.case_token} สำเร็จ"}
