@@ -1507,3 +1507,37 @@ Status: {data['listing_eligibility']}
 "
 
     return Response(content=summary_report, media_type="text/markdown")
+
+
+from backend.app.services.rpt_governance_service import (
+    record_and_verify_rpt_transaction, get_rpt_summary_for_filing
+)
+
+class RecordRptRequest(BaseModel):
+    party_code: str
+    transaction_type: str
+    amount: float
+    market_benchmark: float
+    necessity_reason: str
+    resolution_ref: str
+    resolution_date: str
+    company_slug: str = "tp_extra"
+
+@router.get("/rpt/summary")
+def api_get_rpt_summary(company: str = Query(default="tp_extra"), admin_key: str = Depends(verify_admin_key)):
+    data = get_rpt_summary_for_filing(company_slug=company)
+    return data
+
+@router.post("/rpt/record-transaction")
+def api_record_rpt_transaction(payload: RecordRptRequest, admin_key: str = Depends(verify_admin_key)):
+    res = record_and_verify_rpt_transaction(
+        party_code=payload.party_code,
+        transaction_type=payload.transaction_type,
+        amount=payload.amount,
+        market_benchmark=payload.market_benchmark,
+        necessity_reason=payload.necessity_reason,
+        resolution_ref=payload.resolution_ref,
+        resolution_date_str=payload.resolution_date,
+        company_slug=payload.company_slug
+    )
+    return res
