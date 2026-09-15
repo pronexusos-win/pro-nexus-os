@@ -994,3 +994,58 @@ def download_etax_xml(order_no: str, admin_key: str = Depends(verify_admin_key))
         vat=float(row["platform_vat_amount"])
     )
     return Response(content=xml_text, media_type="application/xml")
+
+
+class ToggleChecklistRequest(BaseModel):
+    task_id: int
+    checkpoint_index: int
+    is_done: bool
+
+class MarkTaskPaidRequest(BaseModel):
+    task_id: int
+    receipt_no: str
+    amount_paid: float
+    admin_emp_code: str = "CPA-ADMIN"
+
+@router.get("/compliance/statutory-tasks")
+def get_statutory_tasks(company: str = Query(default="tp_extra"), admin_key: str = Depends(verify_admin_key)):
+    with get_db_connection() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT id, authority_name, form_code, task_title, cycle_type,
+                       DATE_FORMAT(due_date, '%d/%m/%Y') as due_date_formatted,
+                       DATEDIFF(due_date, CURDATE()) as days_remaining,
+                       base_amount, tax_or_fee_amount, payment_reference_no,
+                       compliance_status, completed_at
+                FROM statutory_compliance_tasks
+                WHERE company_slug = %s
+                ORDER BY due_date ASC;
+                """,
+                (company,)
+            )
+            tasks = cursor.fetchall()
+    return {"status": "success", "tasks": tasks}
+
+@router.post("/compliance/mark-task-paid")
+def mark_task_submitted_and_paid(payload: MarkTaskPaidRequest, admin_key: str = Depends(verify_admin_key)):
+    with get_db_connection() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                """
+                UPDATE statutory_compliance_tasks
+                SET compliance_status = 'SUBMITTED_PAID',
+                    payment_reference_no = %s,
+                    tax_or_fee_amount = %s,
+                    completed_by = %s,
+                    completed_at = NOW()
+                WHERE id = %s;
+                """,
+                (payload.receipt_no, payload.amount_paid, payload.admin_emp_code, payload.task_id)
+            )
+        conn.commit()
+
+    return {
+        "status": "success",
+        "message": f"บันทึกผลการยื่นแบบและชำระเงินงานลำดับที่ {payload.task_id} สำเร็จเรียบร้อย (เลขที่ใบเสร็จ: {payload.receipt_no})"
+    }
