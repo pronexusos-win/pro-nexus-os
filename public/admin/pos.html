@@ -61,6 +61,24 @@
           </button>
         </div>
 
+        
+        <!-- ช่องสแกนบาร์โค้ดสินค้า / บาร์โค้ดป้ายเหลืองลดราคา -->
+        <div class="bg-slate-950/80 border border-slate-700 rounded-2xl p-4 mb-4 space-y-2">
+          <div class="flex justify-between items-center">
+            <span class="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+              <span>📷 สแกนบาร์โค้ดสินค้า / ป้ายเหลือง (FEFO Shield)</span>
+            </span>
+            <span class="text-[10px] text-amber-400 font-mono">ระบบล็อกสินค้าหมดอายุ ≤ 7 วัน</span>
+          </div>
+          <div class="flex gap-2">
+            <input type="text" id="barcodeScanInput" onkeydown="if(event.key==='Enter') handleBarcodeScan()" placeholder="ยิงบาร์โค้ด เช่น 290-SKIN-DISC30 หรือ FOOD-COFFEE-01" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm font-mono font-bold text-white focus:outline-none focus:border-amber-400">
+            <button onclick="handleBarcodeScan()" class="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold rounded-xl text-xs transition">
+              สแกน
+            </button>
+          </div>
+          <div id="fefoAlertBox" class="text-xs hidden p-2.5 rounded-xl"></div>
+        </div>
+
         <!-- กล่องคำนวณเงินสด & เงินทอน -->
         <div class="bg-slate-950/70 border border-slate-700 rounded-2xl p-4 space-y-3">
           <span class="text-xs font-bold text-slate-400 block">💵 เครื่องคิดเงินทอนสด (Cash Change):</span>

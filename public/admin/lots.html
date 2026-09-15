@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FEFO Lot & Expiry Clearance Hub - Pro Nexus OS</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&family=Prompt:wght@500;700;900&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Sarabun', sans-serif; }
+    .display-font { font-family: 'Prompt', sans-serif; }
+  </style>
+</head>
+<body class="bg-slate-100 min-h-screen text-slate-800 p-4 sm:p-8">
+
+  <header class="max-w-6xl mx-auto mb-6 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-4">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-amber-500 flex items-center justify-center text-slate-950 text-xl font-black">🏷️</div>
+      <div>
+        <h1 class="display-font text-lg font-bold text-slate-900">FEFO LOT & EXPIRY CLEARANCE HUB</h1>
+        <p class="text-xs text-slate-400">ระบบบริหารวันหมดอายุ • คัดกรองวันรับเข้า RSL • บาร์โค้ดป้ายเหลือง • ล็อกห้ามขายบน POS</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-2">
+      <a href="index.html" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-600 px-3 py-2 rounded-lg font-semibold transition">
+        ← กลับหน้า Admin
+      </a>
+      <button onclick="loadLots()" class="text-xs bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold px-3 py-2 rounded-lg transition">
+        🔄 รีเฟรชข้อมูลล็อต
+      </button>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto space-y-6">
+
+    <!-- แผงสรุปความเสี่ยงวันหมดอายุ 4 ระดับ (FEFO Risk Tiers) -->
+    <section class="grid grid-cols-1 sm:grid-cols-4 gap-4 text-xs">
+      <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+        <span class="text-emerald-700 font-bold block">🟢 Tier 1: อายุมากกว่า 60 วัน</span>
+        <b class="text-slate-900 text-base block mt-1">ขายราคาปกติ</b>
+        <p class="text-slate-400 mt-1">จัดเรียงแบบ FEFO ดันล็อตเก่าขึ้นหน้า</p>
+      </div>
+      <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+        <span class="text-amber-700 font-bold block">🟡 Tier 2: เหลือ 31 - 60 วัน</span>
+        <b class="text-slate-900 text-base block mt-1">เฝ้าระวัง & แจ้งคู่ค้า</b>
+        <p class="text-slate-400 mt-1">ย้ายมาจุด Eye-level / เตือนคืนของ</p>
+      </div>
+      <div class="bg-white p-4 rounded-2xl border-2 border-amber-400 shadow-sm bg-amber-50/30">
+        <span class="text-amber-800 font-bold block">🟠 Tier 3: เหลือ 8 - 30 วัน</span>
+        <b class="text-amber-900 text-base block mt-1">เคลียร์ป้ายเหลือง</b>
+        <p class="text-amber-700 mt-1">พิมพ์บาร์โค้ดลด 30% - 50%</p>
+      </div>
+      <div class="bg-white p-4 rounded-2xl border-2 border-rose-500 shadow-sm bg-rose-50/40">
+        <span class="text-rose-700 font-bold block">🔴 Tier 4: เหลือน้อยกว่า 7 วัน</span>
+        <b class="text-rose-900 text-base block mt-1">POS ล็อกห้ามขาย!</b>
+        <p class="text-rose-600 mt-1">ปลดลงจากเชลฟ์ ทำลายตาม ป.79</p>
+      </div>
+    </section>
+
+    <!-- ฟอร์มตรวจรับสินค้าเข้าคลัง (Goods Receipt with RSL) -->
+    <section class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+      <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+        <div>
+          <h2 class="display-font font-bold text-base text-slate-900">📥 ตรวจรับสินค้าเข้าคลังและบันทึกล็อต (Goods Receipt & RSL Gate)</h2>
+          <p class="text-xs text-slate-400">ระบบคัดกรองอายุคงเหลือขั้นต่ำ (อาหาร ≥ 70%, สกินแคร์ ≥ 75%) สกัดของเก่าเก็บก่อนเข้าคลัง</p>
+        </div>
+        <span class="px-3 py-1 bg-emerald-100 text-emerald-800 text-xs font-bold rounded-full">RSL Gate เปิดใช้งาน 🟢</span>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-4 gap-3 text-xs">
+        <div>
+          <label class="text-slate-500 block mb-1">รหัสสินค้า SKU:</label>
+          <input type="text" id="rcvSku" value="SKIN-CREAM-01" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 font-mono font-bold">
+        </div>
+        <div>
+          <label class="text-slate-500 block mb-1">เลขล็อต (Lot No.):</label>
+          <input type="text" id="rcvLotNo" placeholder="เช่น LOT-2026-N1" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 font-mono font-bold">
+        </div>
+        <div>
+          <label class="text-slate-500 block mb-1">วันผลิต (MFD):</label>
+          <input type="date" id="rcvMfg" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 font-mono">
+        </div>
+        <div>
+          <label class="text-slate-500 block mb-1">วันหมดอายุ (EXP):</label>
+          <input type="date" id="rcvExp" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 font-mono">
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-4 gap-3 text-xs">
+        <div>
+          <label class="text-slate-500 block mb-1">จำนวนที่รับ (ชิ้น):</label>
+          <input type="number" id="rcvQty" value="50" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 font-mono">
+        </div>
+        <div>
+          <label class="text-slate-500 block mb-1">ราคาทุนต่อหน่วย (บาท):</label>
+          <input type="number" id="rcvCost" value="280" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 font-mono">
+        </div>
+        <div>
+          <label class="text-slate-500 block mb-1">ราคาขายปกติ (บาท):</label>
+          <input type="number" id="rcvPrice" value="590" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 font-mono">
+        </div>
+        <div>
+          <label class="text-slate-500 block mb-1">กรรมสิทธิ์สินค้า:</label>
+          <select id="rcvOwnership" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 font-semibold">
+            <option value="OWN_PURCHASE">ซื้อขาด (บริษัทรับผิดชอบ)</option>
+            <option value="CONSIGNMENT">ฝากขาย (คู่ค้ารับภาระ)</option>
+            <option value="RETURNABLE_AGREEMENT">ซื้อขาดมีสัญญารับคืน (RTV)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="pt-2 flex justify-end">
+        <button onclick="submitReceiveLot()" class="px-6 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs transition shadow-md">
+          ✓ ตรวจสอบ RSL & บันทึกรับเข้าคลัง
+        </button>
+      </div>
+    </section>
+
+    <!-- ตารางล็อตสินค้าพร้อมตัวจัดการป้ายเหลือง -->
+    <section class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+      <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+        <div>
+          <h2 class="display-font font-bold text-base text-slate-900">📦 ทะเบียนล็อตสินค้าและการจัดเรียงขาย (FEFO Inventory Roster)</h2>
+          <p class="text-xs text-slate-400">แสดงผลเรียงตามวันหมดอายุจากเร็วไปช้า เพื่อความถูกต้องในการหยิบขายหน้าร้าน</p>
+        </div>
+        <span class="text-xs text-slate-400">อัปเดตสถานะแบบ Real-time</span>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs">
+          <thead class="bg-slate-50 text-slate-500 font-bold uppercase border-b border-slate-100">
+            <tr>
+              <th class="p-3">สินค้า / ล็อต</th>
+              <th class="p-3">กรรมสิทธิ์</th>
+              <th class="p-3">วันหมดอายุ (EXP)</th>
+              <th class="p-3 text-center">คงเหลือ (วัน)</th>
+              <th class="p-3 text-center">สต็อกคงเหลือ</th>
+              <th class="p-3">ราคาขาย / ป้ายเหลือง</th>
+              <th class="p-3 text-center">การจัดการป้ายเหลือง</th>
+            </tr>
+          </thead>
+          <tbody id="lotsTableBody" class="divide-y divide-slate-100"></tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    const API_BASE = window.location.origin.includes('localhost') 
+      ? 'http://localhost:8000' 
+      : 'https://pro-nexus-os-production.up.railway.app';
+
+    async function loadLots() {
+      const token = sessionStorage.getItem('admin_passcode') || 'admin1234';
+      const tbody = document.getElementById('lotsTableBody');
+      tbody.innerHTML = '<tr><td colspan="7" class="p-4 text-center text-slate-400">กำลังโหลดข้อมูลล็อต...</td></tr>';
+
+      try {
+        const res = await fetch(`${API_BASE}/api/v1/admin/inventory/lots?company=tp_extra`, {
+          headers: { 'x-admin-key': token }
+        });
+        const data = await res.json();
+        if (data.status === 'success') {
+          renderLots(data.lots || []);
+        }
+      } catch (err) {
+        tbody.innerHTML = '<tr><td colspan="7" class="p-4 text-center text-rose-500">โหลดข้อมูลล้มเหลว</td></tr>';
+      }
+    }
+
+    function renderLots(lots) {
+      const tbody = document.getElementById('lotsTableBody');
+      if (lots.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="p-4 text-center text-slate-400">ไม่มีล็อตสินค้าคงเหลือ</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = lots.map(l => {
+        const days = l.days_to_expire;
+        const isExpiredOrCrit = days <= 7;
+        const isClearance = days > 7 && days <= 30;
+
+        return `
+          <tr class="hover:bg-slate-50 ${isExpiredOrCrit ? 'bg-rose-50/50' : ''}">
+            <td class="p-3">
+              <b class="text-slate-900 block">${l.product_name}</b>
+              <span class="font-mono text-[10px] text-slate-400">${l.sku} | ล็อต: <b class="text-slate-700">${l.lot_no}</b></span>
+            </td>
+            <td class="p-3">
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold ${l.ownership_type === 'CONSIGNMENT' ? 'bg-purple-100 text-purple-800' : (l.ownership_type === 'RETURNABLE_AGREEMENT' ? 'bg-sky-100 text-sky-800' : 'bg-slate-100 text-slate-700')}">
+                ${l.ownership_type === 'CONSIGNMENT' ? 'ฝากขาย' : (l.ownership_type === 'RETURNABLE_AGREEMENT' ? 'ซื้อขาดมีสิทธิคืน' : 'ซื้อขาด')}
+              </span>
+            </td>
+            <td class="p-3 font-mono text-slate-700">${l.expiry_date}</td>
+            <td class="p-3 text-center">
+              <span class="px-2.5 py-1 rounded-full font-mono font-bold text-xs ${isExpiredOrCrit ? 'bg-rose-100 text-rose-800 animate-pulse' : (isClearance ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800')}">
+                ${days > 0 ? `เหลือ ${days} วัน` : 'หมดอายุแล้ว'} ${isExpiredOrCrit ? '🚨 ล็อก POS' : ''}
+              </span>
+            </td>
+            <td class="p-3 text-center font-mono font-bold text-slate-900">${l.remaining_quantity} ชิ้น</td>
+            <td class="p-3">
+              ${l.markdown_barcode ? `
+                <div class="space-y-0.5">
+                  <span class="text-rose-600 font-bold font-mono text-sm">฿${parseFloat(l.markdown_price).toFixed(2)}</span>
+                  <span class="text-[10px] text-slate-400 line-through block font-mono">฿${parseFloat(l.selling_price).toFixed(2)}</span>
+                  <span class="px-1.5 py-0.2 bg-amber-100 text-amber-900 font-mono text-[10px] rounded font-bold">🏷️ ${l.markdown_barcode}</span>
+                </div>
+              ` : `
+                <span class="font-mono font-bold text-slate-800">฿${parseFloat(l.selling_price).toFixed(2)}</span>
+              `}
+            </td>
+            <td class="p-3 text-center space-x-1">
+              ${isExpiredOrCrit ? `
+                <span class="text-rose-600 font-bold text-[11px] block">กักกันส่งทำลาย ป.79</span>
+              ` : `
+                <button onclick="createMarkdown(${l.id}, 30)" class="px-2 py-1 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded text-[11px] font-bold transition">
+                  🏷️ ป้ายเหลือง -30%
+                </button>
+                <button onclick="createMarkdown(${l.id}, 50)" class="px-2 py-1 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded text-[11px] font-bold transition">
+                  -50%
+                </button>
+              `}
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    async function submitReceiveLot() {
+      const token = sessionStorage.getItem('admin_passcode') || 'admin1234';
+      const mfg = document.getElementById('rcvMfg').value;
+      const exp = document.getElementById('rcvExp').value;
+      const lot = document.getElementById('rcvLotNo').value.trim();
+
+      if (!lot || !mfg || !exp) {
+        alert("กรุณากรอกข้อมูลเลขล็อต วันผลิต และวันหมดอายุให้ครบถ้วน");
+        return;
+      }
+
+      const body = {
+        sku: document.getElementById('rcvSku').value.trim(),
+        lot_no: lot,
+        mfg_date: mfg,
+        expiry_date: exp,
+        quantity: parseInt(document.getElementById('rcvQty').value) || 1,
+        unit_cost: parseFloat(document.getElementById('rcvCost').value) || 0,
+        selling_price: parseFloat(document.getElementById('rcvPrice').value) || 0,
+        ownership_type: document.getElementById('rcvOwnership').value
+      };
+
+      try {
+        const res = await fetch(`${API_BASE}/api/v1/admin/inventory/receive-lot`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-admin-key': token },
+          body: JSON.stringify(body)
+        });
+        const json = await res.json();
+        if (res.ok) {
+          alert(json.message);
+          loadLots();
+        } else {
+          alert(json.detail);
+        }
+      } catch (err) {
+        alert("ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้");
+      }
+    }
+
+    async function createMarkdown(lotId, pct) {
+      const token = sessionStorage.getItem('admin_passcode') || 'admin1234';
+      try {
+        const res = await fetch(`${API_BASE}/api/v1/admin/inventory/create-markdown`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-admin-key': token },
+          body: JSON.stringify({ lot_id: lotId, discount_pct: pct })
+        });
+        const json = await res.json();
+        if (res.ok) {
+          alert(`ออกบาร์โค้ดป้ายเหลืองสำเร็จ!\n• บาร์โค้ด: ${json.markdown_barcode}\n• ราคาเดิม: ฿${json.normal_price}\n• ราคาป้ายเหลือง (-${pct}%): ฿${json.markdown_price}\nพิมพ์สติกเกอร์แปะทับสินค้าล็อต ${json.lot_no} ได้ทันที`);
+          loadLots();
+        } else {
+          alert(json.detail);
+        }
+      } catch (err) {}
+    }
+
+    // กำหนดวันเริ่มต้นฟอร์ม
+    window.addEventListener('DOMContentLoaded', () => {
+      const now = new Date();
+      document.getElementById('rcvMfg').value = now.toISOString().slice(0, 10);
+      const nextYear = new Date(now.setFullYear(now.getFullYear() + 1));
+      document.getElementById('rcvExp').value = nextYear.toISOString().slice(0, 10);
+      document.getElementById('rcvLotNo').value = "LOT-" + Math.random().toString(36).substring(2, 7).toUpperCase();
+      loadLots();
+    });
+  </script>
+</body>
+</html>

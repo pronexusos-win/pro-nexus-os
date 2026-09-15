@@ -1199,3 +1199,76 @@ def get_shrinkage_summary(company: str = Query(default="tp_extra"), admin_key: s
             maints = cursor.fetchall()
 
     return {"status": "success", "writeoffs": writeoffs, "maintenances": maints}
+
+
+from backend.app.services.fefo_expiry_service import (
+    receive_product_lot, generate_markdown_clearance_barcode, check_fefo_pos_item
+)
+
+class ReceiveLotRequest(BaseModel):
+    sku: str
+    lot_no: str
+    mfg_date: str
+    expiry_date: str
+    quantity: int
+    unit_cost: float
+    selling_price: float
+    ownership_type: str = "OWN_PURCHASE"
+    supplier_code: str = "SUP-BP-001"
+
+class CreateMarkdownRequest(BaseModel):
+    lot_id: int
+    discount_pct: float = 30.0
+
+class PosItemCheckRequest(BaseModel):
+    barcode_or_sku: str
+    company_slug: str = "tp_extra"
+
+@router.get("/inventory/lots")
+def get_inventory_lots(company: str = Query(default="tp_extra"), admin_key: str = Depends(verify_admin_key)):
+    with get_db_connection() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT pl.id, pl.lot_no, pl.sku, p.name as product_name, pl.ownership_type,
+                       pl.supplier_code, DATE_FORMAT(pl.mfg_date, '%d/%m/%Y') as mfg_date,
+                       DATE_FORMAT(pl.expiry_date, '%d/%m/%Y') as expiry_date,
+                       DATEDIFF(pl.expiry_date, CURDATE()) as days_to_expire,
+                       pl.remaining_shelf_life_pct, pl.remaining_quantity,
+                       pl.selling_price, pl.markdown_barcode, pl.markdown_discount_pct,
+                       pl.markdown_price, pl.lot_status
+                FROM product_lots pl
+                JOIN products p ON pl.sku = p.sku AND p.company_slug = pl.company_slug
+                WHERE pl.company_slug = %s AND pl.remaining_quantity > 0
+                ORDER BY pl.expiry_date ASC;
+                """,
+                (company,)
+            )
+            lots = cursor.fetchall()
+    return {"status": "success", "lots": lots}
+
+@router.post("/inventory/receive-lot")
+def api_receive_product_lot(payload: ReceiveLotRequest, admin_key: str = Depends(verify_admin_key)):
+    try:
+        res = receive_product_lot(
+            sku=payload.sku, lot_no=payload.lot_no, mfg_date_str=payload.mfg_date,
+            expiry_date_str=payload.expiry_date, quantity=payload.quantity,
+            unit_cost=payload.unit_cost, selling_price=payload.selling_price,
+            ownership_type=payload.ownership_type, supplier_code=payload.supplier_code
+        )
+        return res
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@router.post("/inventory/create-markdown")
+def api_create_markdown(payload: CreateMarkdownRequest, admin_key: str = Depends(verify_admin_key)):
+    try:
+        res = generate_markdown_clearance_barcode(lot_id=payload.lot_id, discount_pct=payload.discount_pct)
+        return res
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@router.post("/inventory/pos-check-item")
+def api_pos_check_item(payload: PosItemCheckRequest):
+    res = check_fefo_pos_item(barcode_or_sku=payload.barcode_or_sku, company_slug=payload.company_slug)
+    return res
