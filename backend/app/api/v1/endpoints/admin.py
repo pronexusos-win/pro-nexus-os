@@ -1631,3 +1631,74 @@ def api_update_case_resolution(payload: UpdateCaseResolutionRequest, admin_key: 
             )
         conn.commit()
     return {"status": "success", "message": f"อัปเดตผลการพิจารณาคดี {payload.case_token} สำเร็จ"}
+
+
+from backend.app.services.pdpa_governance_service import (
+    upsert_customer_consent, handle_data_erasure_request,
+    mask_phone_number, mask_id_card, mask_bank_account
+)
+
+class RecordConsentRequest(BaseModel):
+    customer_ref_id: str
+    service_terms: bool = True
+    marketing_consent: bool = False
+    third_party_consent: bool = False
+    ip_address: Optional[str] = "127.0.0.1"
+
+class ProcessDsrRequest(BaseModel):
+    ticket_no: str
+    customer_ref_id: str
+    dpo_notes: str = "ดำเนินการลบข้อมูลการตลาดและแปลงข้อมูลเป็นนิรนามตาม ม.33"
+
+@router.get("/pdpa/summary")
+def api_get_pdpa_summary(company: str = Query(default="tp_extra"), admin_key: str = Depends(verify_admin_key)):
+    with get_db_connection() as conn:
+        with conn.cursor() as cursor:
+            # ดึงสถิติความยินยอม
+            cursor.execute(
+                """
+                SELECT 
+                    COUNT(id) as total_consented_users,
+                    SUM(CASE WHEN marketing_consent = TRUE THEN 1 ELSE 0 END) as marketing_optin_count,
+                    SUM(CASE WHEN third_party_sharing_consent = TRUE THEN 1 ELSE 0 END) as third_party_optin_count
+                FROM customer_consents
+                WHERE company_slug = %s;
+                """,
+                (company,)
+            )
+            stats = cursor.fetchone()
+
+            # ดึงรายการคำขอสิทธิ (DSR)
+            cursor.execute(
+                """
+                SELECT request_ticket_no, customer_ref_id, request_type, status,
+                       dpo_notes, DATE_FORMAT(created_at, '%d/%m/%Y %H:%i') as created_at
+                FROM pdpa_subject_requests
+                WHERE company_slug = %s
+                ORDER BY id DESC LIMIT 10;
+                """,
+                (company,)
+            )
+            requests = cursor.fetchall()
+
+    return {"status": "success", "stats": stats, "dsr_requests": requests}
+
+@router.post("/pdpa/record-consent")
+def api_record_consent(payload: RecordConsentRequest):
+    res = upsert_customer_consent(
+        customer_id=payload.customer_ref_id,
+        service_terms=payload.service_terms,
+        marketing=payload.marketing_consent,
+        third_party=payload.third_party_consent,
+        ip_addr=payload.ip_address
+    )
+    return res
+
+@router.post("/pdpa/process-dsr")
+def api_process_dsr(payload: ProcessDsrRequest, admin_key: str = Depends(verify_admin_key)):
+    res = handle_data_erasure_request(
+        ticket_no=payload.ticket_no,
+        customer_id=payload.customer_ref_id,
+        dpo_notes=payload.dpo_notes
+    )
+    return res
