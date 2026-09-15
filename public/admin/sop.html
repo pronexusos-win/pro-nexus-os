@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IPO System Handover Dossier & SOP Manual - Pro Nexus OS</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&family=Prompt:wght@500;700;900&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Sarabun', sans-serif; }
+    .display-font { font-family: 'Prompt', sans-serif; }
+    @media print {
+      header, .no-print { display: none !important; }
+      body { background: white; color: black; padding: 0; }
+      .print-border { border: 1px solid #ccc !important; box-shadow: none !important; }
+    }
+  </style>
+</head>
+<body class="bg-slate-100 min-h-screen text-slate-800 p-4 sm:p-8">
+
+  <header class="max-w-5xl mx-auto mb-6 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-4">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center text-white text-xl font-black">📑</div>
+      <div>
+        <h1 class="display-font text-lg font-bold text-slate-900">IPO HANDOVER DOSSIER & SOP MANUAL</h1>
+        <p class="text-xs text-slate-400">คู่มือระเบียบปฏิบัติงานมาตรฐาน (SOP) • แฟ้มเอกสารส่งมอบระบบสู่ตลาดหลักทรัพย์ (SET/mai)</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-2 no-print">
+      <a href="index.html" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-600 px-3 py-2 rounded-lg font-semibold transition">
+        ← กลับหน้า Admin
+      </a>
+      <button onclick="window.print()" class="text-xs bg-slate-900 hover:bg-slate-800 text-white font-bold px-4 py-2 rounded-lg transition shadow flex items-center gap-1.5">
+        🖨️ พิมพ์เอกสารรับรอง (Print PDF)
+      </button>
+    </div>
+  </header>
+
+  <main class="max-w-5xl mx-auto space-y-6">
+
+    <!-- ใบปะหน้าเอกสารส่งมอบระบบ (System Compliance Certificate) -->
+    <section class="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm space-y-4 print-border">
+      <div class="flex justify-between items-start border-b border-slate-200 pb-4">
+        <div>
+          <span class="text-xs text-amber-600 font-bold uppercase tracking-wider block">PRO NEXUS ENTERPRISE OS</span>
+          <h2 class="display-font text-xl font-bold text-slate-900 mt-0.5">หนังสือรับรองความพร้อมระบบเทคโนโลยีสารสนเทศและการควบคุมภายใน</h2>
+          <p class="text-xs text-slate-400 mt-1">เอกสารแนบประกอบการยื่นแบบแสดงรายการข้อมูลการเสนอขายหลักทรัพย์ (แบบ 56-1 / Filing)</p>
+        </div>
+        <div class="text-right font-mono text-xs">
+          <span class="px-2.5 py-1 bg-emerald-100 text-emerald-800 rounded-full font-bold">READY FOR AUDIT 🟢</span>
+          <p class="text-slate-400 mt-1 text-[11px]">เวอร์ชัน: 2.0-PROD-2026</p>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs pt-2">
+        <div class="p-3 bg-slate-50 rounded-xl border border-slate-200">
+          <b class="text-slate-900 block mb-1">สถาปัตยกรรมการเงิน:</b>
+          <p class="text-slate-600">5-Bucket Virtual Escrow แยกเงินซัพพลายเออร์ 65% และเงินภาษี ปิดกะเงินสดตาบอด ป้องกันการทุจริต</p>
+        </div>
+        <div class="p-3 bg-slate-50 rounded-xl border border-slate-200">
+          <b class="text-slate-900 block mb-1">มาตรฐานสต็อก & FEFO:</b>
+          <p class="text-slate-600">คัดกรองวันรับเข้า RSL, ล็อกสินค้าหมดอายุบน POS, และตรวจนับสต็อกแบบตาบอดตามมาตรฐาน COSO</p>
+        </div>
+        <div class="p-3 bg-slate-50 rounded-xl border border-slate-200">
+          <b class="text-slate-900 block mb-1">การกำกับดูแล & ธรรมาภิบาล:</b>
+          <p class="text-slate-600">ควบคุมราคาตลาด Arm's Length (RPT), Whistleblowing ตรงสู่กรรมการตรวจสอบ, และคุ้มครองข้อมูล PDPA</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- รายละเอียดคู่มือขั้นตอนปฏิบัติงานมาตรฐาน 6 หมวด (SOP Matrix) -->
+    <section class="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm space-y-6 print-border">
+      <h3 class="display-font text-base font-bold text-slate-900 border-b pb-3">
+        📚 สารบัญคู่มือปฏิบัติงานมาตรฐาน (Standard Operating Procedures - SOP)
+      </h3>
+
+      <div class="space-y-4 text-xs">
+
+        <!-- SOP-01 -->
+        <div class="p-4 rounded-2xl border border-slate-200 bg-slate-50/50 space-y-2">
+          <div class="flex justify-between items-center">
+            <b class="text-slate-900 text-sm">SOP-01: ระเบียบปฏิบัติการจุดขายหน้าร้าน (Cashier & POS Procedures)</b>
+            <span class="px-2 py-0.5 bg-slate-200 text-slate-700 rounded text-[10px] font-mono">หน้าร้านสาขา</span>
+          </div>
+          <ul class="list-disc list-inside space-y-1 text-slate-600 pl-1">
+            <li><b>เปิดกะ:</b> แคชเชียร์ต้องตรวจสอบและบันทึกเงินทอนเริ่มต้นในระบบ (Opening Float ฿2,000)</li>
+            <li><b>การสแกนสินค้า:</b> ใช้กล้องสมาร์ทโฟนหรือเครื่องสแกนบาร์โค้ด หากระบบแจ้งเตือนสีแดง (สินค้าเหลืออายุ ≤ 7 วัน) ห้ามจำหน่ายเด็ดขาด</li>
+            <li><b>ปิดกะ:</b> นับเงินสดในลิ้นชักและหยอดเงินลงตู้เซฟแบบตาบอด (Blind Cash Drop) โดยไม่ดูตัวเลขยอดขายในระบบ</li>
+          </ul>
+        </div>
+
+        <!-- SOP-02 -->
+        <div class="p-4 rounded-2xl border border-slate-200 bg-slate-50/50 space-y-2">
+          <div class="flex justify-between items-center">
+            <b class="text-slate-900 text-sm">SOP-02: การตรวจรับสินค้าและบริหารอายุล็อต (FEFO & Shelf Life Control)</b>
+            <span class="px-2 py-0.5 bg-slate-200 text-slate-700 rounded text-[10px] font-mono">คลังสินค้าและสาขา</span>
+          </div>
+          <ul class="list-disc list-inside space-y-1 text-slate-600 pl-1">
+            <li><b>ด่านคัดกรองวันรับเข้า (RSL Gate):</b> สินค้าอาหารต้องเหลืออายุไม่น้อยกว่า 70% สกินแคร์ไม่น้อยกว่า 75% หากต่ำกว่าระบบจะปฏิเสธการรับเข้า</li>
+            <li><b>การจัดเรียง FEFO:</b> ล็อตที่หมดอายุก่อนต้องนำมาวางไว้แถวหน้าสุดเสมอ</li>
+            <li><b>การทำป้ายเหลือง (Clearance):</b> สินค้าที่เหลืออายุ 15–30 วัน ให้พิมพ์สติกเกอร์ป้ายเหลือง (Prefix 290-) ลดราคา 30% หรือ 50% แปะทับบาร์โค้ดเดิม</li>
+          </ul>
+        </div>
+
+        <!-- SOP-03 -->
+        <div class="p-4 rounded-2xl border border-slate-200 bg-slate-50/50 space-y-2">
+          <div class="flex justify-between items-center">
+            <b class="text-slate-900 text-sm">SOP-03: การปิดรอบบัญชีและจัดสรร 5-Bucket Virtual Escrow</b>
+            <span class="px-2 py-0.5 bg-slate-200 text-slate-700 rounded text-[10px] font-mono">ผู้จัดการ & ฝ่ายบัญชี</span>
+          </div>
+          <ul class="list-disc list-inside space-y-1 text-slate-600 pl-1">
+            <li><b>เวลาดำเนินการ:</b> เวลา 21:30 น. ของทุกวันทำการ ผู้จัดการสาขาตรวจสอบผลต่างเงินสดในหน้า <code>/settlement.html</code></li>
+            <li><b>การกดยืนยัน:</b> ระบบจะจัดสรรเงิน 65% เข้าบัญชีพักซัพพลายเออร์ และกันเงินสำรองสาขา 7% รวมถึงภาษี 1% อัตโนมัติ</li>
+            <li><b>การพิมพ์หลักฐาน:</b> พิมพ์ใบสรุปปิดรอบประจำวัน เซ็นชื่อกำกับคู่ระหว่างผู้จัดการและแคชเชียร์เพื่อแนบส่งฝ่ายบัญชี</li>
+          </ul>
+        </div>
+
+        <!-- SOP-04 -->
+        <div class="p-4 rounded-2xl border border-slate-200 bg-slate-50/50 space-y-2">
+          <div class="flex justify-between items-center">
+            <b class="text-slate-900 text-sm">SOP-04: ระเบียบภาษีอากรและการตัดจำหน่ายของเสีย (Statutory & Waste Control)</b>
+            <span class="px-2 py-0.5 bg-slate-200 text-slate-700 rounded text-[10px] font-mono">ฝ่ายบัญชีและการเงิน</span>
+          </div>
+          <ul class="list-disc list-inside space-y-1 text-slate-600 pl-1">
+            <li><b>การจำแนกภาษี:</b> สินค้าพืชผลสดและปุ๋ยเคมีได้รับการยกเว้นภาษีมูลค่าเพิ่มตาม ม.81 ห้ามออกใบกำกับภาษีเด็ดขาด</li>
+            <li><b>การตัดสินค้าชำรุด (ป.79/2541):</b> ต้องมีพยานตรวจนับ 2 ฝ่าย ถ่ายภาพหลักฐาน และทำลายจริง เพื่อนำไปหักเป็นรายจ่ายทางภาษีโดยไม่ต้องเสีย VAT 7% เสมือนการขาย</li>
+            <li><b>การยื่นแบบภาษี:</b> ตรวจสอบเดดไลน์และนำส่ง ภ.พ.30 รวมถึง ภ.ง.ด. 53/1 ผ่านระบบ e-Filing ภายในวันที่ 23 ของทุกเดือน</li>
+          </ul>
+        </div>
+
+        <!-- SOP-05 -->
+        <div class="p-4 rounded-2xl border border-slate-200 bg-slate-50/50 space-y-2">
+          <div class="flex justify-between items-center">
+            <b class="text-slate-900 text-sm">SOP-05: การกำกับรายการที่เกี่ยวโยงกันและช่องทางแจ้งเบาะแส (RPT & Ethics)</b>
+            <span class="px-2 py-0.5 bg-slate-200 text-slate-700 rounded text-[10px] font-mono">คณะกรรมการตรวจสอบ</span>
+          </div>
+          <ul class="list-disc list-inside space-y-1 text-slate-600 pl-1">
+            <li><b>เกณฑ์ราคาตลาด (Arm's Length):</b> ธุรกรรมระหว่างกันทุกรายการต้องมีเอกสารราคาตลาดอ้างอิง และผ่านมติคณะกรรมการตรวจสอบก่อนเริ่มทำสัญญา</li>
+            <li><b>การคุ้มครองผู้แจ้งเบาะแส:</b> คดีร้องเรียนทุจริตในระบบ Whistleblowing จะถูกส่งตรงถึงคณะกรรมการตรวจสอบโดยไม่ผ่านผู้บริหาร ผู้แจ้งจะได้รับรหัสลับในการติดตามผล</li>
+          </ul>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ลายมือชื่อผู้รับรองความพร้อมระบบ (Sign-off Section) -->
+    <section class="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm print-border">
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-8 text-center text-xs pt-4">
+        <div class="space-y-6">
+          <div class="border-b border-slate-400 w-48 mx-auto pb-8"></div>
+          <p><b>(นายวิชัย ชำนาญการ)</b><br><span class="text-slate-500">ผู้แทนผู้จัดการสาขาและปฏิบัติการ</span></p>
+        </div>
+        <div class="space-y-6">
+          <div class="border-b border-slate-400 w-48 mx-auto pb-8"></div>
+          <p><b>(นางสุภาพร บัญชีชำนาญ)</b><br><span class="text-slate-500">หัวหน้าฝ่ายบัญชีและการเงิน</span></p>
+        </div>
+        <div class="space-y-6">
+          <div class="border-b border-slate-400 w-48 mx-auto pb-8"></div>
+          <p><b>(ดร. พัฒนา บรรษัทภิบาล)</b><br><span class="text-slate-500">ประธานคณะกรรมการตรวจสอบ / CFO</span></p>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+</body>
+</html>
