@@ -1272,3 +1272,88 @@ def api_create_markdown(payload: CreateMarkdownRequest, admin_key: str = Depends
 def api_pos_check_item(payload: PosItemCheckRequest):
     res = check_fefo_pos_item(barcode_or_sku=payload.barcode_or_sku, company_slug=payload.company_slug)
     return res
+
+
+from backend.app.services.shelf_click_collect_service import (
+    calculate_shelf_kpi_rankings, complete_customer_pickup, process_unclaimed_orders
+)
+
+class PickupScanRequest(BaseModel):
+    pickup_code: str
+    branch_id: str = "HEADQUARTER"
+    company_slug: str = "tp_extra"
+
+class PromoteShelfRequest(BaseModel):
+    sku: str
+    target_zone: str = "A2-MIDDLE"
+    branch_id: str = "HEADQUARTER"
+    company_slug: str = "tp_extra"
+
+@router.get("/shelf/dashboard")
+def get_shelf_dashboard(branch_id: str = "HEADQUARTER", company: str = "tp_extra", admin_key: str = Depends(verify_admin_key)):
+    calculate_shelf_kpi_rankings(branch_id=branch_id, company_slug=company)
+
+    with get_db_connection() as conn:
+        with conn.cursor() as cursor:
+            # 1. รายการสินค้าบนเชลฟ์และคะแนน KPI
+            cursor.execute(
+                """
+                SELECT psp.*, p.name as product_name, p.price as price
+                FROM product_shelf_placements psp
+                JOIN products p ON psp.sku = p.sku AND p.company_slug = psp.company_slug
+                WHERE psp.branch_id = %s AND psp.company_slug = %s
+                ORDER BY psp.shelf_kpi_score DESC;
+                """,
+                (branch_id, company)
+            )
+            shelves = cursor.fetchall()
+
+            # 2. รายการออเดอร์ Click & Collect รอรับที่สาขา
+            cursor.execute(
+                """
+                SELECT id, order_no, customer_name, customer_phone, sku, quantity, total_amount,
+                       DATE_FORMAT(arrived_at_branch_date, '%d/%m/%Y') as arrived_date,
+                       DATE_FORMAT(pickup_deadline_date, '%d/%m/%Y') as deadline_date,
+                       DATEDIFF(pickup_deadline_date, CURDATE()) as days_left,
+                       pickup_status, pickup_qr_code, unclaimed_handling_fee
+                FROM click_collect_orders
+                WHERE pickup_branch_id = %s AND company_slug = %s
+                ORDER BY FIELD(pickup_status, 'READY_FOR_PICKUP', 'UNCLAIMED_EXPIRED', 'COMPLETED_COLLECTED'), pickup_deadline_date ASC;
+                """,
+                (branch_id, company)
+            )
+            orders = cursor.fetchall()
+
+    return {"status": "success", "shelves": shelves, "click_collect_orders": orders}
+
+@router.post("/shelf/promote-to-physical")
+def api_promote_shelf(payload: PromoteShelfRequest, admin_key: str = Depends(verify_admin_key)):
+    with get_db_connection() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                """
+                UPDATE product_shelf_placements
+                SET shelf_type = 'PHYSICAL_SHELF', shelf_zone = %s, qualification_status = 'REGULAR'
+                WHERE sku = %s AND branch_id = %s AND company_slug = %s;
+                """,
+                (payload.target_zone, payload.sku, payload.branch_id, payload.company_slug)
+            )
+        conn.commit()
+    return {"status": "success", "message": f"เลื่อนขั้นสินค้า {payload.sku} ขึ้นวางบนเชลฟ์จริงโซน {payload.target_zone} สำเร็จ"}
+
+@router.post("/click-collect/scan-pickup")
+def api_scan_pickup(payload: PickupScanRequest, admin_key: str = Depends(verify_admin_key)):
+    try:
+        res = complete_customer_pickup(
+            pickup_qr_or_order=payload.pickup_code,
+            branch_id=payload.branch_id,
+            company_slug=payload.company_slug
+        )
+        return res
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@router.post("/click-collect/process-unclaimed")
+def api_process_unclaimed(branch_id: str = "HEADQUARTER", company: str = "tp_extra", admin_key: str = Depends(verify_admin_key)):
+    res = process_unclaimed_orders(branch_id=branch_id, company_slug=company)
+    return res
