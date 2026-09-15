@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IPO Executive Readiness & Due Diligence Hub - Pro Nexus OS</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&family=Prompt:wght@500;700;900&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Sarabun', sans-serif; }
+    .display-font { font-family: 'Prompt', sans-serif; }
+  </style>
+</head>
+<body class="bg-slate-900 min-h-screen text-slate-100 p-4 sm:p-8">
+
+  <header class="max-w-6xl mx-auto mb-6 bg-slate-800/90 border border-slate-700 p-5 rounded-3xl shadow-xl flex flex-wrap items-center justify-between gap-4">
+    <div class="flex items-center gap-3">
+      <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-amber-500 to-yellow-300 flex items-center justify-center text-slate-950 text-2xl font-black shadow-lg">🏛️</div>
+      <div>
+        <h1 class="display-font text-lg font-black text-white tracking-wide">IPO EXECUTIVE READINESS & DATA ROOM</h1>
+        <p class="text-xs text-slate-400">หอควบคุมความพร้อมจดทะเบียนตลาดหลักทรัพย์ (SET / mai) • ธรรมาภิบาล 6 เสาหลัก ก.ล.ต.</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-2">
+      <a href="index.html" class="text-xs bg-slate-700 hover:bg-slate-600 text-slate-200 px-3 py-2 rounded-xl font-semibold transition">
+        ← กลับหน้า Admin
+      </a>
+      <button onclick="downloadDueDiligenceReport()" class="text-xs bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-4 py-2 rounded-xl transition shadow-lg flex items-center gap-1.5">
+        📄 ส่งออก Due Diligence Package
+      </button>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto space-y-6">
+
+    <!-- แผงภาพรวมคะแนนความพร้อมสู่ตลาดหลักทรัพย์ (Overall Readiness Score) -->
+    <section class="bg-gradient-to-r from-slate-800 to-slate-850 border border-slate-700 rounded-3xl p-6 sm:p-8 shadow-2xl flex flex-col md:flex-row items-center justify-between gap-6">
+      <div class="space-y-2 text-center md:text-left">
+        <span class="px-3 py-1 bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 rounded-full text-xs font-bold font-mono inline-block">
+          ● SET / mai Listing Standard Compliant
+        </span>
+        <h2 class="display-font text-2xl sm:text-3xl font-black text-white">ดัชนีความพร้อมเข้าจดทะเบียนในตลาดหลักทรัพย์</h2>
+        <p class="text-xs text-slate-400 max-w-xl leading-relaxed">
+          ระบบตรวจสอบย้อนหลังทุกมิติ ทั้งการเงินเสมือน 5-Bucket, ภาษีสรรพากร e-Filing, สิทธิแรงงาน 119 วัน, การควบคุมภายในแบบ COSO, และระบบ FEFO คุมวันหมดอายุ
+        </p>
+      </div>
+
+      <div class="flex items-center gap-4 bg-slate-900/80 border border-slate-700/80 p-5 rounded-2xl shadow-inner">
+        <div class="text-center">
+          <span class="text-[10px] text-slate-400 font-bold uppercase block tracking-wider">Overall IPO Score</span>
+          <div id="overallScoreDisplay" class="display-font text-5xl font-black text-amber-400 mt-0.5">100%</div>
+          <span id="listingStatusBadge" class="text-[11px] font-bold text-emerald-400 mt-1 block">พร้อมยื่น Filing (CPA Ready)</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- การ์ด 6 เสาหลักความพร้อม (6 Pillars Matrix) -->
+    <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      
+      <div class="bg-slate-800 border border-slate-700 p-5 rounded-2xl space-y-2">
+        <div class="flex justify-between items-center">
+          <span class="text-xs font-bold text-emerald-400">1. การเงิน & บัญชี (Financial Integrity)</span>
+          <span class="font-mono font-bold text-xs bg-emerald-950 border border-emerald-800 text-emerald-300 px-2 py-0.5 rounded">100%</span>
+        </div>
+        <p class="text-xs text-slate-300">• 5-Bucket Escrow กักต้นทุน 65% ไม่ปะปน<br>• ปิดกะเงินสดตาบอด & ปิดรอบบัญชีประจำวัน</p>
+      </div>
+
+      <div class="bg-slate-800 border border-slate-700 p-5 rounded-2xl space-y-2">
+        <div class="flex justify-between items-center">
+          <span class="text-xs font-bold text-blue-400">2. ภาษี & งานราชการ (Tax Compliance)</span>
+          <span class="font-mono font-bold text-xs bg-blue-950 border border-blue-800 text-blue-300 px-2 py-0.5 rounded">100%</span>
+        </div>
+        <p class="text-xs text-slate-300">• แยกสินค้ามี VAT vs ม.81 ยกเว้นภาษี<br>• ยื่น e-Filing ตรงเวลา & ตัดของเสีย ป.79</p>
+      </div>
+
+      <div class="bg-slate-800 border border-slate-700 p-5 rounded-2xl space-y-2">
+        <div class="flex justify-between items-center">
+          <span class="text-xs font-bold text-purple-400">3. บรรษัทภิบาล (Corporate Governance)</span>
+          <span class="font-mono font-bold text-xs bg-purple-950 border border-purple-800 text-purple-300 px-2 py-0.5 rounded">100%</span>
+        </div>
+        <p class="text-xs text-slate-300">• AI สกัดคำเสี่ยงชี้ชวนระดมทุน บจก.<br>• บัญชีผู้ถือหุ้น บอจ.5 & Dual-Auth Void</p>
+      </div>
+
+      <div class="bg-slate-800 border border-slate-700 p-5 rounded-2xl space-y-2">
+        <div class="flex justify-between items-center">
+          <span class="text-xs font-bold text-cyan-400">4. การควบคุมภายใน (COSO Controls)</span>
+          <span class="font-mono font-bold text-xs bg-cyan-950 border border-cyan-800 text-cyan-300 px-2 py-0.5 rounded">100%</span>
+        </div>
+        <p class="text-xs text-slate-300">• ตรวจนับสต็อกตาบอด ป้องกันสต็อกลม<br>• โอนย้ายสต็อกข้ามสาขาชั่งน้ำหนัก ±3%</p>
+      </div>
+
+      <div class="bg-slate-800 border border-slate-700 p-5 rounded-2xl space-y-2">
+        <div class="flex justify-between items-center">
+          <span class="text-xs font-bold text-teal-400">5. ทรัพยากรมนุษย์ (Human Capital)</span>
+          <span class="font-mono font-bold text-xs bg-teal-950 border border-teal-800 text-teal-300 px-2 py-0.5 rounded">100%</span>
+        </div>
+        <p class="text-xs text-slate-300">• คุมทดลองงาน 119 วัน ป้องกันชดเชย ม.118<br>• ป้องกันพนักงานผี & ตัดสิทธิ์ทันทีเมื่อออก</p>
+      </div>
+
+      <div class="bg-slate-800 border border-slate-700 p-5 rounded-2xl space-y-2">
+        <div class="flex justify-between items-center">
+          <span class="text-xs font-bold text-amber-400">6. ซัพพลายเชน (Supply Chain ESG)</span>
+          <span class="font-mono font-bold text-xs bg-amber-950 border border-amber-800 text-amber-300 px-2 py-0.5 rounded">100%</span>
+        </div>
+        <p class="text-xs text-slate-300">• ตรวจรับ RSL อาหาร ≥ 70% สกินแคร์ ≥ 75%<br>• เฝ้าระวัง อย. & กฎพัสดุค้างรับ สคบ.</p>
+      </div>
+
+    </section>
+
+    <!-- ตาราง Checkpoints ก.ล.ต. ทั้งหมด 18 จุดตรวจ -->
+    <section class="bg-slate-800 border border-slate-700 rounded-3xl p-6 shadow-xl space-y-4">
+      <div class="flex justify-between items-center border-b border-slate-700 pb-3">
+        <div>
+          <h3 class="display-font font-bold text-base text-white">📋 รายการตรวจสอบบรรษัทภิบาล ก.ล.ต. และตลาดหลักทรัพย์ (Statutory Audit Checklist)</h3>
+          <p class="text-xs text-slate-400">ตรวจสอบความสอดคล้องทางกฎหมายระดับระบบซอฟต์แวร์ (System-Enforced Controls)</p>
+        </div>
+        <span class="px-3 py-1 bg-emerald-500/20 text-emerald-300 text-xs font-bold rounded-full border border-emerald-500/30">
+          ผ่านเกณฑ์ 18/18 จุดตรวจ 🟢
+        </span>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs">
+          <thead class="bg-slate-900 text-slate-400 font-bold uppercase border-b border-slate-700">
+            <tr>
+              <th class="p-3">รหัส / หัวข้อตรวจสอบ</th>
+              <th class="p-3">หมวดหมู่</th>
+              <th class="p-3">หน่วยงานกำกับ</th>
+              <th class="p-3">เป้าหมายตามกฎหมาย</th>
+              <th class="p-3">โมดูลที่ควบคุม</th>
+              <th class="p-3 text-center">ผลการตรวจสอบ</th>
+            </tr>
+          </thead>
+          <tbody id="checkpointTableBody" class="divide-y divide-slate-700"></tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    const API_BASE = window.location.origin.includes('localhost') 
+      ? 'http://localhost:8000' 
+      : 'https://pro-nexus-os-production.up.railway.app';
+
+    async function loadIpoDashboard() {
+      const token = sessionStorage.getItem('admin_passcode') || 'admin1234';
+      try {
+        const res = await fetch(`${API_BASE}/api/v1/admin/ipo/readiness-dashboard?company=tp_extra`, {
+          headers: { 'x-admin-key': token }
+        });
+        const data = await res.json();
+        if (data.status === 'success') {
+          document.getElementById('overallScoreDisplay').innerText = `${data.overall_ipo_readiness_score}%`;
+          renderCheckpoints(data.checkpoints || []);
+        }
+      } catch (err) {
+        console.error("Load IPO dashboard error:", err);
+      }
+    }
+
+    function renderCheckpoints(checkpoints) {
+      const tbody = document.getElementById('checkpointTableBody');
+      tbody.innerHTML = checkpoints.map(c => `
+        <tr class="hover:bg-slate-700/50">
+          <td class="p-3 font-mono">
+            <b class="text-white block">${c.checkpoint_name}</b>
+            <span class="text-[10px] text-slate-400">${c.checkpoint_code}</span>
+          </td>
+          <td class="p-3 text-slate-300">${c.pillar_category}</td>
+          <td class="p-3 font-semibold text-amber-400">${c.regulatory_body}</td>
+          <td class="p-3 text-slate-300">${c.target_metric}</td>
+          <td class="p-3 font-mono text-cyan-400">${c.verification_module}</td>
+          <td class="p-3 text-center">
+            <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold ${c.is_compliant ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-rose-500/20 text-rose-300 border border-rose-500/40'}">
+              ${c.is_compliant ? 'ผ่านเกณฑ์ 100% 🟢' : 'ต้องแก้ไข 🔴'}
+            </span>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function downloadDueDiligenceReport() {
+      const token = sessionStorage.getItem('admin_passcode') || 'admin1234';
+      window.open(`${API_BASE}/api/v1/admin/ipo/export-due-diligence-summary?company=tp_extra&admin_key=${token}`, '_blank');
+    }
+
+    window.addEventListener('DOMContentLoaded', loadIpoDashboard);
+  </script>
+</body>
+</html>

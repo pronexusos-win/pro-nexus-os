@@ -1476,3 +1476,34 @@ def get_audit_history(company: str = Query(default="tp_extra"), admin_key: str =
             )
             audits = cursor.fetchall()
     return {"status": "success", "audits": audits}
+
+
+from backend.app.services.ipo_readiness_service import calculate_ipo_readiness_index
+
+@router.get("/ipo/readiness-dashboard")
+def api_get_ipo_dashboard(company: str = Query(default="tp_extra"), admin_key: str = Depends(verify_admin_key)):
+    data = calculate_ipo_readiness_index(company_slug=company)
+    return data
+
+@router.get("/ipo/export-due-diligence-summary")
+def api_export_due_diligence(company: str = Query(default="tp_extra"), admin_key: str = Depends(verify_admin_key)):
+    data = calculate_ipo_readiness_index(company_slug=company)
+    summary_report = f"""# PRO NEXUS / TP EXTRA OS - IPO DUE DILIGENCE EXECUTIVE REPORT
+Generated at: {data['evaluated_at']}
+Overall IPO Readiness Index: {data['overall_ipo_readiness_score']}%
+Status: {data['listing_eligibility']}
+
+## Summary of 6 Pillars:
+"""
+    for cat, p in data["pillars"].items():
+        summary_report += f"- {cat}: {p['readiness_score']}% ({p['passed_checks']}/{p['total_checks']} Passed)
+"
+
+    summary_report += """
+## Detailed Audit Checkpoints:
+"""
+    for c in data["checkpoints"]:
+        summary_report += f"[{PASS if c[is_compliant] else FAIL}] {c[checkpoint_code]}: {c[checkpoint_name]} (Regulator: {c[regulatory_body]})
+"
+
+    return Response(content=summary_report, media_type="text/markdown")
