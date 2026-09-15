@@ -847,3 +847,112 @@ def offboard_employee(payload: OffboardRequest, admin_key: str = Depends(verify_
         "status": "success",
         "message": f"ดำเนินการตัดสิทธิ์เข้าระบบและทำเรื่องพ้นสภาพพนักงาน {payload.emp_code} สำเร็จ"
     }
+
+
+class CloseDailyLedgerRequest(BaseModel):
+    branch_id: str = "HEADQUARTER"
+    company_slug: str = "tp_extra"
+    manager_emp_code: str = "MGR-001"
+
+@router.get("/settlement/daily-preview")
+def get_daily_settlement_preview(branch_id: str = "HEADQUARTER", company: str = "tp_extra", admin_key: str = Depends(verify_admin_key)):
+    today = datetime.now().date()
+    with get_db_connection() as conn:
+        with conn.cursor() as cursor:
+            # 1. ยอดขายแยกตามวิธีชำระ (เงินสด vs พร้อมเพย์)
+            cursor.execute(
+                """
+                SELECT 
+                    COUNT(id) as total_orders,
+                    COALESCE(SUM(total_amount), 0) as gross_total,
+                    COALESCE(SUM(CASE WHEN line_user_id = 'POS_CASH_CUSTOMER' THEN total_amount ELSE 0 END), 0) as cash_total,
+                    COALESCE(SUM(CASE WHEN line_user_id != 'POS_CASH_CUSTOMER' THEN total_amount ELSE 0 END), 0) as promptpay_total
+                FROM orders
+                WHERE company_slug = %s AND status = 'paid' AND DATE(created_at) = %s;
+                """,
+                (company, today)
+            )
+            sales = cursor.fetchone()
+
+            # 2. ยอดตัดแบ่ง 5 กองทุนของวันนี้
+            cursor.execute(
+                """
+                SELECT 
+                    COALESCE(SUM(supplier_cost_payable), 0) as supplier_pool,
+                    COALESCE(SUM(branch_operating_share), 0) as branch_pool,
+                    COALESCE(SUM(utility_reserve_accrual), 0) as utility_pool,
+                    COALESCE(SUM(marketing_commission), 0) as commission_pool,
+                    COALESCE(SUM(platform_net_gp), 0) as platform_gp
+                FROM order_financial_splits
+                WHERE company_slug = %s AND branch_id = %s AND DATE(created_at) = %s;
+                """,
+                (company, branch_id, today)
+            )
+            splits = cursor.fetchone()
+
+            # 3. ผลต่างเงินสดจาก Blind Shift ล่าสุด
+            cursor.execute(
+                """
+                SELECT COALESCE(SUM(variance_amount), 0) as total_variance
+                FROM shift_cash_reconciliations
+                WHERE company_slug = %s AND branch_id = %s AND shift_date = %s;
+                """,
+                (company, branch_id, today)
+            )
+            variance_row = cursor.fetchone()
+            variance = float(variance_row["total_variance"]) if variance_row else 0.0
+
+    return {
+        "status": "success",
+        "date": str(today),
+        "branch_id": branch_id,
+        "sales_summary": sales,
+        "splits_summary": splits,
+        "cash_variance": variance
+    }
+
+@router.post("/settlement/close-daily-ledger")
+def close_daily_ledger(payload: CloseDailyLedgerRequest, admin_key: str = Depends(verify_admin_key)):
+    today = datetime.now().date()
+    preview = get_daily_settlement_preview(branch_id=payload.branch_id, company=payload.company_slug, admin_key=admin_key)
+    sales = preview["sales_summary"]
+    splits = preview["splits_summary"]
+
+    with get_db_connection() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                """
+                INSERT INTO daily_financial_closings (
+                    closing_date, branch_id, company_slug,
+                    total_orders_count, gross_sales_amount, cash_sales_amount, promptpay_sales_amount,
+                    supplier_escrow_total, branch_operating_total, utility_reserve_total,
+                    commission_total, platform_net_gp_total, cash_variance, closed_by_emp_code
+                )
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                ON DUPLICATE KEY UPDATE 
+                    total_orders_count = VALUES(total_orders_count),
+                    gross_sales_amount = VALUES(gross_sales_amount),
+                    cash_sales_amount = VALUES(cash_sales_amount),
+                    promptpay_sales_amount = VALUES(promptpay_sales_amount),
+                    supplier_escrow_total = VALUES(supplier_escrow_total),
+                    branch_operating_total = VALUES(branch_operating_total),
+                    utility_reserve_total = VALUES(utility_reserve_total),
+                    commission_total = VALUES(commission_total),
+                    platform_net_gp_total = VALUES(platform_net_gp_total),
+                    cash_variance = VALUES(cash_variance);
+                """,
+                (
+                    today, payload.branch_id, payload.company_slug,
+                    sales["total_orders"], sales["gross_total"], sales["cash_total"], sales["promptpay_total"],
+                    splits["supplier_pool"], splits["branch_pool"], splits["utility_pool"],
+                    splits["commission_pool"], splits["platform_gp"], preview["cash_variance"],
+                    payload.manager_emp_code
+                )
+            )
+        conn.commit()
+
+    return {
+        "status": "success",
+        "message": f"ปิดรอบบัญชีและล็อกยอดประจำวัน {today} สาขา {payload.branch_id} สำเร็จเรียบร้อย",
+        "gross_sales": sales["gross_total"]
+    }

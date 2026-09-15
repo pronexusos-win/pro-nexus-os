@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Daily Financial Settlement & Close Hub - Pro Nexus OS</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&family=Prompt:wght@500;700;900&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Sarabun', sans-serif; }
+    .display-font { font-family: 'Prompt', sans-serif; }
+    @media print {
+      body * { visibility: hidden; }
+      #printableSlip, #printableSlip * { visibility: visible; }
+      #printableSlip { position: absolute; left: 0; top: 0; width: 100%; }
+    }
+  </style>
+</head>
+<body class="bg-slate-100 min-h-screen text-slate-800 p-4 sm:p-8">
+
+  <header class="max-w-4xl mx-auto mb-6 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-4">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-amber-600 flex items-center justify-center text-white text-xl font-black">🧾</div>
+      <div>
+        <h1 class="display-font text-lg font-bold text-slate-900">DAILY FINANCIAL SETTLEMENT</h1>
+        <p class="text-xs text-slate-400">ระบบปิดรอบบัญชีเงินสด & พร้อมเพย์ประจำวัน • กระทบยอด 5 กองทุน</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-2">
+      <a href="index.html" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-600 px-3 py-2 rounded-lg font-semibold transition">
+        ← หน้าหลัก
+      </a>
+      <button onclick="loadPreview()" class="text-xs bg-amber-600 hover:bg-amber-700 text-white px-3 py-2 rounded-lg font-semibold transition">
+        🔄 ตรวจสอบยอดวันนี้
+      </button>
+    </div>
+  </header>
+
+  <main class="max-w-4xl mx-auto space-y-6">
+
+    <!-- แผงยอดขายรวมและการแยกกระเป๋าเงินสด/พร้อมเพย์ -->
+    <section class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-6">
+      <div class="flex justify-between items-center border-b border-slate-100 pb-4">
+        <div>
+          <span class="text-xs text-slate-400">วันที่ทำการตรวจสอบ</span>
+          <h2 id="displayDate" class="display-font text-xl font-bold text-slate-900 mt-0.5">-</h2>
+        </div>
+        <div class="text-right">
+          <span class="text-xs text-slate-400">สถานะกะหน้าร้าน</span>
+          <span class="block px-3 py-1 bg-amber-100 text-amber-800 text-xs font-bold rounded-full mt-0.5">รออนุมัติปิดรอบประจำวัน</span>
+        </div>
+      </div>
+
+      <!-- สรุปยอดขายตามประเภทการชำระเงิน -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200">
+          <span class="text-xs text-slate-500 font-bold block">ยอดขายรวมทั้งหมด (GMV)</span>
+          <h3 id="grossSales" class="display-font text-2xl font-black text-slate-900 mt-1">฿0.00</h3>
+          <span id="orderCount" class="text-[11px] text-slate-400 block mt-1">0 รายการออเดอร์</span>
+        </div>
+        <div class="p-4 rounded-2xl bg-emerald-50 border border-emerald-200">
+          <span class="text-xs text-emerald-800 font-bold block">💵 ยอดชำระเงินสด (Cash Drop)</span>
+          <h3 id="cashSales" class="display-font text-2xl font-black text-emerald-700 mt-1">฿0.00</h3>
+          <span class="text-[11px] text-emerald-600 block mt-1">นำเงินสดใส่ซองเข้าตู้เซฟ</span>
+        </div>
+        <div class="p-4 rounded-2xl bg-sky-50 border border-sky-200">
+          <span class="text-xs text-sky-800 font-bold block">📱 ยอดชำระพร้อมเพย์ (085-116-2629)</span>
+          <h3 id="promptpaySales" class="display-font text-2xl font-black text-sky-700 mt-1">฿0.00</h3>
+          <span class="text-[11px] text-sky-600 block mt-1">เงินเข้าบัญชีเรียบร้อย 100%</span>
+        </div>
+      </div>
+
+      <!-- สรุปการตัดแบ่งเข้า 5 กองทุน -->
+      <div class="bg-slate-900 text-white p-5 rounded-2xl space-y-3">
+        <span class="text-xs font-bold text-slate-400 uppercase tracking-wider block">🏛️ สรุปตัดเงินเข้า 5 กองทุนประจำวัน (Automated Escrow Distribution):</span>
+        <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 text-center text-xs">
+          <div class="bg-slate-800 p-2.5 rounded-xl border border-slate-700">
+            <span class="text-[10px] text-slate-400 block">ซัพพลายเออร์ (65%)</span>
+            <b id="splitSup" class="text-emerald-400 block mt-1">฿0.00</b>
+          </div>
+          <div class="bg-slate-800 p-2.5 rounded-xl border border-slate-700">
+            <span class="text-[10px] text-slate-400 block">บริหารสาขา (12%)</span>
+            <b id="splitBranch" class="text-slate-200 block mt-1">฿0.00</b>
+          </div>
+          <div class="bg-slate-800 p-2.5 rounded-xl border border-slate-700">
+            <span class="text-[10px] text-slate-400 block">กองทุนน้ำไฟ (3%)</span>
+            <b id="splitUtil" class="text-sky-400 block mt-1">฿0.00</b>
+          </div>
+          <div class="bg-slate-800 p-2.5 rounded-xl border border-slate-700">
+            <span class="text-[10px] text-slate-400 block">คอมมิชชัน (5%)</span>
+            <b id="splitComm" class="text-amber-400 block mt-1">฿0.00</b>
+          </div>
+          <div class="bg-slate-800 p-2.5 rounded-xl border border-slate-700">
+            <span class="text-[10px] text-slate-400 block">แพลตฟอร์ม (15%)</span>
+            <b id="splitPlat" class="text-indigo-400 block mt-1">฿0.00</b>
+          </div>
+        </div>
+      </div>
+
+      <!-- ผลต่างเงินสดจากการปิดกะตาบอด -->
+      <div class="p-4 rounded-2xl bg-amber-50 border border-amber-200 flex justify-between items-center text-xs">
+        <div>
+          <span class="font-bold text-amber-900 block">🔍 ผลต่างเงินสดจากการตรวจนับตาบอด (Cash Variance):</span>
+          <span class="text-slate-500">ผลรวมความคลาดเคลื่อนของแคชเชียร์ในวันนี้</span>
+        </div>
+        <div id="displayVariance" class="font-mono text-base font-black text-amber-900">฿0.00</div>
+      </div>
+
+      <div class="flex justify-end gap-3 pt-2">
+        <button onclick="window.print()" class="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs transition flex items-center gap-1.5">
+          🖨️ พิมพ์ใบสรุปปิดรอบ
+        </button>
+        <button onclick="confirmCloseDaily()" class="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs shadow-lg transition flex items-center gap-1.5">
+          🔒 อนุมัติปิดรอบบัญชีและล็อกยอดประจำวัน
+        </button>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Printable Slip (แสดงเฉพาะตอนพิมพ์) -->
+  <div id="printableSlip" class="p-8 max-w-md mx-auto text-xs space-y-4 font-mono">
+    <div class="text-center border-b pb-2">
+      <h2 class="font-bold text-sm">BAENGPUN SMART POS</h2>
+      <p class="text-[11px]">ใบสรุปปิดรอบบัญชีประจำวัน (Daily Financial Close Slip)</p>
+      <p id="slipDate" class="text-[10px] text-slate-500">-</p>
+    </div>
+    <div class="space-y-1">
+      <div class="flex justify-between"><span>จำนวนออเดอร์ทั้งหมด:</span><b id="slipOrders">0</b></div>
+      <div class="flex justify-between"><span>ยอดขายรวม (GMV):</span><b id="slipGross">฿0.00</b></div>
+      <div class="flex justify-between"><span>- ชำระด้วยเงินสด (ใส่ซอง):</span><b id="slipCash">฿0.00</b></div>
+      <div class="flex justify-between"><span>- ชำระด้วยพร้อมเพย์:</span><b id="slipPromptPay">฿0.00</b></div>
+      <div class="flex justify-between"><span>ผลต่างเงินสด (Variance):</span><b id="slipVariance">฿0.00</b></div>
+    </div>
+    <div class="border-t pt-2 space-y-1">
+      <div class="font-bold text-[11px]">การจัดสรร 5 กองทุน (Escrow):</div>
+      <div class="flex justify-between"><span>1. กองทุนซัพพลายเออร์ (65%):</span><span id="slipSup">฿0.00</span></div>
+      <div class="flex justify-between"><span>2. ค่าบริหารสาขา (12%):</span><span id="slipBranch">฿0.00</span></div>
+      <div class="flex justify-between"><span>3. กองทุนสำรองน้ำไฟ (3%):</span><span id="slipUtil">฿0.00</span></div>
+      <div class="flex justify-between"><span>4. คอมมิชชันตัวแทน (5%):</span><span id="slipComm">฿0.00</span></div>
+      <div class="flex justify-between"><span>5. แพลตฟอร์ม (15%):</span><span id="slipPlat">฿0.00</span></div>
+    </div>
+    <div class="border-t pt-6 grid grid-cols-2 gap-4 text-center text-[10px]">
+      <div>
+        <div class="border-b pb-6"></div>
+        <p class="mt-1">ลงชื่อ แคชเชียร์ผู้ส่งเงิน</p>
+      </div>
+      <div>
+        <div class="border-b pb-6"></div>
+        <p class="mt-1">ลงชื่อ ผู้จัดการสาขาผู้อนุมัติ</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = window.location.origin.includes('localhost') 
+      ? 'http://localhost:8000' 
+      : 'https://pro-nexus-os-production.up.railway.app';
+
+    async function loadPreview() {
+      const token = sessionStorage.getItem('admin_passcode') || 'admin1234';
+      try {
+        const res = await fetch(`${API_BASE}/api/v1/admin/settlement/daily-preview?company=tp_extra&branch_id=HEADQUARTER`, {
+          headers: { 'x-admin-key': token }
+        });
+        const data = await res.json();
+        if (data.status === 'success') {
+          const s = data.sales_summary;
+          const sp = data.splits_summary;
+          
+          document.getElementById('displayDate').innerText = data.date;
+          document.getElementById('slipDate').innerText = `สาขา: ${data.branch_id} | วันที่: ${data.date}`;
+
+          document.getElementById('grossSales').innerText = `฿${parseFloat(s.gross_total).toLocaleString(undefined, {minimumFractionDigits: 2})}`;
+          document.getElementById('orderCount').innerText = `${s.total_orders} รายการออเดอร์`;
+          document.getElementById('cashSales').innerText = `฿${parseFloat(s.cash_total).toLocaleString(undefined, {minimumFractionDigits: 2})}`;
+          document.getElementById('promptpaySales').innerText = `฿${parseFloat(s.promptpay_total).toLocaleString(undefined, {minimumFractionDigits: 2})}`;
+
+          document.getElementById('splitSup').innerText = `฿${parseFloat(sp.supplier_pool).toFixed(2)}`;
+          document.getElementById('splitBranch').innerText = `฿${parseFloat(sp.branch_pool).toFixed(2)}`;
+          document.getElementById('splitUtil').innerText = `฿${parseFloat(sp.utility_pool).toFixed(2)}`;
+          document.getElementById('splitComm').innerText = `฿${parseFloat(sp.commission_pool).toFixed(2)}`;
+          document.getElementById('splitPlat').innerText = `฿${parseFloat(sp.platform_gp).toFixed(2)}`;
+
+          document.getElementById('displayVariance').innerText = `฿${parseFloat(data.cash_variance).toFixed(2)}`;
+
+          // Slip
+          document.getElementById('slipOrders').innerText = s.total_orders;
+          document.getElementById('slipGross').innerText = `฿${parseFloat(s.gross_total).toFixed(2)}`;
+          document.getElementById('slipCash').innerText = `฿${parseFloat(s.cash_total).toFixed(2)}`;
+          document.getElementById('slipPromptPay').innerText = `฿${parseFloat(s.promptpay_total).toFixed(2)}`;
+          document.getElementById('slipVariance').innerText = `฿${parseFloat(data.cash_variance).toFixed(2)}`;
+          document.getElementById('slipSup').innerText = `฿${parseFloat(sp.supplier_pool).toFixed(2)}`;
+          document.getElementById('slipBranch').innerText = `฿${parseFloat(sp.branch_pool).toFixed(2)}`;
+          document.getElementById('slipUtil').innerText = `฿${parseFloat(sp.utility_pool).toFixed(2)}`;
+          document.getElementById('slipComm').innerText = `฿${parseFloat(sp.commission_pool).toFixed(2)}`;
+          document.getElementById('slipPlat').innerText = `฿${parseFloat(sp.platform_gp).toFixed(2)}`;
+        }
+      } catch (err) {
+        console.error("Load settlement preview error:", err);
+      }
+    }
+
+    async function confirmCloseDaily() {
+      if (!confirm("ยืนยันการปิดรอบบัญชีประจำวัน? เมื่อกดแล้วยอดขายและเงินสดของวันนี้จะถูกล็อกสำหรับส่งสำนักงานบัญชี")) return;
+      const token = sessionStorage.getItem('admin_passcode') || 'admin1234';
+
+      try {
+        const res = await fetch(`${API_BASE}/api/v1/admin/settlement/close-daily-ledger`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-admin-key': token
+          },
+          body: JSON.stringify({
+            branch_id: 'HEADQUARTER',
+            company_slug: 'tp_extra',
+            manager_emp_code: 'MGR-001'
+          })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          alert(data.message);
+          loadPreview();
+        } else {
+          alert("ข้อผิดพลาด: " + data.detail);
+        }
+      } catch (err) {
+        alert("ไม่สามารถติดต่อเซิร์ฟเวอร์ได้");
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', loadPreview);
+  </script>
+</body>
+</html>
