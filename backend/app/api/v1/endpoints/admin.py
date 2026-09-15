@@ -1828,3 +1828,44 @@ def api_check_page_access(role: str, page: str):
             res = cursor.fetchone()
             is_allowed = res["allowed"] > 0 or role == "AUDIT_EXEC"
     return {"status": "success", "is_allowed": is_allowed}
+
+
+class MemberCardRequest(BaseModel):
+    member_code: str = "MEM-88899"
+    app_host: str = "https://pro-nexus-os-production.up.railway.app"
+
+@router.get("/member/digital-card")
+def api_get_digital_member_card(member_code: str = "MEM-88899", app_host: str = "https://pro-nexus-os-production.up.railway.app"):
+    with get_db_connection() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute("SELECT * FROM member_referral_passes WHERE member_code = %s;", (member_code,))
+            member = cursor.fetchone()
+
+            if not member:
+                # ถ้ายังไม่มีให้สร้างบัตรให้อัตโนมัติ
+                invite_url = f"{app_host}/admin/register.html?ref={member_code}"
+                qr_url = f"https://api.qrserver.com/v1/create-qr-code/?size=350x350&data={invite_url}"
+                cursor.execute(
+                    """
+                    INSERT INTO member_referral_passes (member_code, full_name, phone_number, referral_qr_url, direct_invite_link)
+                    VALUES (%s, %s, %s, %s, %s);
+                    """,
+                    (member_code, "สมาชิก Pro Nexus", "08X-XXX-XXXX", qr_url, invite_url)
+                )
+                conn.commit()
+                cursor.execute("SELECT * FROM member_referral_passes WHERE member_code = %s;", (member_code,))
+                member = cursor.fetchone()
+
+    invite_link = f"{app_host}/admin/register.html?ref={member[member_code]}"
+    qr_code_url = f"https://api.qrserver.com/v1/create-qr-code/?size=350x350&data={invite_link}"
+
+    return {
+        "status": "success",
+        "member_code": member["member_code"],
+        "full_name": member["full_name"],
+        "tier_level": member["tier_level"],
+        "total_invited": member["total_invited_members"],
+        "invite_link": invite_link,
+        "qr_code_url": qr_code_url,
+        "packaging_sticker_title": f"สแกนเพื่อสมัครสมาชิกและรับสิทธิพิเศษ (ผู้แนะนำ: {member[member_code]})"
+    }
