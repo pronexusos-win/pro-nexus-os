@@ -1,3 +1,4 @@
+from backend.app.api.v1.endpoints.scanner_auth import router as scanner_auth_router
 import os
 import pymysql
 from fastapi import FastAPI, HTTPException, Request, Header, status
@@ -291,4 +292,5 @@ def reset_company_data(req: ResetRequest):
     finally:
         conn.close()
 
-app.include_router(admin_router)
+app.include_router(scanner_auth_router, prefix="/api/v1")
+    app.include_router(admin_router)

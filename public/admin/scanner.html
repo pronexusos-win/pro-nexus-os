@@ -3,11 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Smart Scanner - Pro Nexus OS</title>
+  <title>Universal Smart Scanner - Pro Nexus Platform</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- LINE LIFF SDK -->
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
-  <!-- Web Fallback Scanner -->
   <script src="https://unpkg.com/html5-qrcode"></script>
   <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&family=Prompt:wght@500;700;900&display=swap" rel="stylesheet">
   <style>
@@ -17,38 +15,72 @@
 </head>
 <body class="bg-slate-950 min-h-screen text-slate-100 flex flex-col justify-between p-4">
 
-  <!-- ส่วนหัวแสดงสถานะระบบสแกน -->
-  <header class="text-center space-y-1 pt-2">
-    <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-900 border border-slate-800 text-[11px] text-slate-400">
-      <span id="scannerEngineBadge">กำลังตรวจสอบช่องทางสแกน...</span>
+  <!-- แถบด้านบน: เลือกบริษัท และสถานะผู้ใช้ -->
+  <header class="max-w-md w-full mx-auto space-y-2 pt-2">
+    <div class="flex items-center justify-between">
+      <!-- ตัวสลับ 4 บริษัท -->
+      <select id="companySelector" onchange="switchCompany(this.value)" class="bg-slate-900 border border-slate-700 text-xs text-amber-400 font-bold px-3 py-1.5 rounded-xl">
+        <option value="pro_nexus">🏢 บมจ. โปร เน็กซัส (HQ)</option>
+        <option value="tp_extra">🏪 บริษัท ทีพี เอ็กซ์ตร้า จำกัด</option>
+        <option value="partner_retail">🛍️ บริษัท พาร์ทเนอร์ รีเทล</option>
+        <option value="health_supply">🌿 บริษัท เฮลท์ ซัพพลาย จำกัด</option>
+      </select>
+
+      <span id="scannerEngineBadge" class="text-[10px] px-2.5 py-1 rounded-full bg-slate-900 border border-slate-800 text-slate-400">
+        ตรวจสถานะ...
+      </span>
     </div>
-    <h1 class="display-font text-xl font-bold text-white tracking-wide">PRO NEXUS SMART SCANNER</h1>
-    <p class="text-xs text-slate-400">สแกนบาร์โค้ดสินค้า • ป้ายเหลืองลดราคา • คิวอาร์รับพัสดุ</p>
+
+    <!-- แถบแสดงข้อมูลบัญชี LINE ที่ยืนยันแล้ว -->
+    <div id="userInfoBar" class="hidden p-2 rounded-xl bg-slate-900/90 border border-emerald-500/30 flex items-center justify-between text-xs">
+      <div class="flex items-center gap-2">
+        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+        <span>LINE: <b id="dspLineUser" class="text-emerald-300">--</b></span>
+      </div>
+      <button onclick="logoutAuth()" class="text-[10px] text-slate-400 hover:text-rose-400 underline">ออกจากระบบ</button>
+    </div>
   </header>
 
-  <!-- กล่องแสดงผลและช่องกล้องสแกน -->
-  <main class="max-w-md w-full mx-auto space-y-4 my-auto">
+  <!-- ม่านล็อกหน้าจอสำหรับเครื่องคอมพิวเตอร์ (PC LINE Login Gate) -->
+  <div id="pcAuthGate" class="hidden max-w-md w-full mx-auto my-auto bg-slate-900 border border-slate-800 rounded-3xl p-6 text-center space-y-4 shadow-2xl">
+    <div class="w-12 h-12 rounded-2xl bg-emerald-500/20 text-emerald-400 text-2xl flex items-center justify-center mx-auto">
+      🔐
+    </div>
+    <div class="space-y-1">
+      <h2 class="display-font text-base font-bold text-white">เข้าสู่ระบบด้วย LINE เพื่อเปิดกล้อง</h2>
+      <p class="text-xs text-slate-400">ระบบทำงานบนคอมพิวเตอร์ กรุณาใช้สมาร์ทโฟนสแกนเพื่อเข้ารหัสยืนยันตัวตน</p>
+    </div>
 
-    <!-- จุดแสดงกล้อง WebRTC (กรณีไม่ได้เปิดใน LINE) -->
+    <div class="bg-white p-3 rounded-2xl w-48 h-48 mx-auto shadow-inner border border-slate-300 flex items-center justify-center">
+      <img id="pcAuthQrImg" src="" alt="LINE Auth QR" class="w-full h-full object-contain">
+    </div>
+
+    <div class="text-[11px] text-slate-400 flex items-center justify-center gap-1.5">
+      <span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping"></span>
+      <span>กำลังรอการอนุมัติสิทธิ์จาก LINE...</span>
+    </div>
+  </div>
+
+  <!-- ส่วนแสดงกล้องสแกน (เมื่อยืนยันตัวตนสำเร็จ) -->
+  <main id="scannerMainUI" class="max-w-md w-full mx-auto space-y-4 my-auto">
+    <!-- จอกล้อง WebRTC บนคอมฯ / เว็บเบราว์เซอร์ -->
     <div id="webCameraContainer" class="hidden rounded-3xl overflow-hidden border-2 border-amber-400/60 bg-black shadow-2xl">
       <div id="webReader" style="width: 100%; min-height: 250px;"></div>
       <p class="text-[11px] text-center text-slate-400 py-2 bg-slate-900">ส่องกล้องให้เห็นบาร์โค้ดหรือ QR Code ชัดเจน</p>
     </div>
 
-    <!-- ปุ่มกดเปิดกล้องสแกน (ทำงานอัตโนมัติทั้ง LINE และ Web) -->
     <div class="space-y-3">
       <button onclick="triggerUniversalScan()" id="btnMainScan" class="w-full bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-slate-950 font-black py-4 rounded-2xl transition shadow-xl text-base flex items-center justify-center gap-2">
         <span class="text-xl">📷</span>
         <span>แตะเพื่อเปิดกล้องสแกน</span>
       </button>
 
-      <!-- ปุ่มเปิดกล้องของเว็บสำรอง -->
       <button onclick="toggleWebCamera()" id="btnWebFallback" class="w-full bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-300 font-bold py-2.5 rounded-xl text-xs transition">
-        📱 สลับเป็นกล้องเว็บเบราว์เซอร์
+        💻 สลับโหมดกล้องเว็บ / เว็บแคม PC
       </button>
     </div>
 
-    <!-- กล่องแสดงผลลัพธ์หลังสแกนเสร็จ -->
+    <!-- กล่องแสดงผลลัพธ์การสแกน -->
     <div id="scanResultCard" class="hidden p-5 rounded-2xl border border-slate-800 bg-slate-900 space-y-3">
       <div class="flex justify-between items-start">
         <div>
@@ -59,7 +91,7 @@
       </div>
       <div id="resActionDetails" class="text-xs text-slate-300 border-t border-slate-800 pt-2 space-y-1"></div>
       <div class="pt-1 flex gap-2">
-        <button onclick="executeAction()" id="btnExecuteAction" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 rounded-xl text-xs transition">
+        <button id="btnExecuteAction" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 rounded-xl text-xs transition">
           ดำเนินการต่อ
         </button>
         <button onclick="triggerUniversalScan()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl text-xs transition">
@@ -67,51 +99,145 @@
         </button>
       </div>
     </div>
-
   </main>
 
-  <footer class="text-center text-[11px] text-slate-500 pb-2">
-    รองรับทั้งกล้อง LINE Native Scanner และ HTML5 WebRTC Camera
+  <footer class="text-center text-[10px] text-slate-500 pb-2">
+    Multi-Tenant Camera Engine • บันทึกหลักฐาน Audit Trail ตามเกณฑ์ ITGC
   </footer>
 
   <script>
-    const API_BASE = window.location.origin.includes('localhost') 
-      ? 'http://localhost:8000' 
-      : 'https://pro-nexus-os-production.up.railway.app';
+    const API_BASE = window.location.origin.includes('localhost') ? 'http://localhost:8000' : 'https://pro-nexus-os-production.up.railway.app';
+    
+    // ตั้งค่า LIFF ID ประจำแต่ละบริษัท (สามารถแยกกันได้ตามต้องการ)
+    const COMPANY_LIFF_MAP = {
+      "pro_nexus": "2011564874-MNIECumQ",
+      "tp_extra": "2011564874-MNIECumQ", // ใส่ LIFF ID ของ TP Extra หรือใช้ตัวกลาง
+      "partner_retail": "2011564874-MNIECumQ",
+      "health_supply": "2011564874-MNIECumQ"
+    };
 
-    // ใส่ LIFF ID ที่สร้างไว้บน LINE Developers Console (ถ้ามี)
-    const MY_LIFF_ID = "2011564874-MNIECumQ"; 
-
+    const urlParams = new URLSearchParams(window.location.search);
+    let activeCompany = urlParams.get('company') || localStorage.getItem('active_company') || 'pro_nexus';
+    let currentSessionToken = null;
+    let pollTimer = null;
     let isLiffReady = false;
     let html5QrScanner = null;
     let isWebCamActive = false;
-    let currentScannedData = null;
 
-    // เริ่มต้นระบบตรวจสอบสภาพแวดล้อม
+    document.getElementById('companySelector').value = activeCompany;
+
+    function switchCompany(newCompany) {
+      localStorage.setItem('active_company', newCompany);
+      window.location.href = `scanner.html?company=${newCompany}`;
+    }
+
     window.addEventListener('DOMContentLoaded', async () => {
       const badge = document.getElementById('scannerEngineBadge');
-      
+      const targetLiffId = COMPANY_LIFF_MAP[activeCompany] || COMPANY_LIFF_MAP["pro_nexus"];
+
+      // 1. ตรวจสอบว่าเปิดผ่าน LINE App หรือไม่
       try {
-        if (typeof liff !== 'undefined' && MY_LIFF_ID !== "YOUR_LIFF_ID_HERE") {
-          await liff.init({ liffId: MY_LIFF_ID });
+        if (typeof liff !== 'undefined') {
+          await liff.init({ liffId: targetLiffId });
           if (liff.isInClient()) {
             isLiffReady = true;
-            badge.innerHTML = "🟢 ทำงานบน LINE App (LINE Native Scanner)";
-            badge.className = "inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-950 border border-emerald-700 text-[11px] text-emerald-300";
+            const profile = await liff.getProfile();
+            setAuthenticatedState(profile.displayName, profile.userId);
+            badge.innerHTML = `🟢 LINE Scanner (${activeCompany})`;
+            badge.className = "text-[10px] px-2.5 py-1 rounded-full bg-emerald-950 border border-emerald-700 text-emerald-300";
+
+            // ถ้าเปิดเข้ามาเพื่อยืนยัน Session ให้คอมฯ
+            const verifyToken = urlParams.get('auth_session');
+            if (verifyToken) {
+              await confirmPcSession(verifyToken, profile.userId, profile.displayName);
+            }
             return;
           }
         }
       } catch (err) {
-        console.log("LIFF Init fallback:", err);
+        console.warn("LIFF not in client, falling back to Web PC mode:", err);
       }
 
-      badge.innerHTML = "🌐 ทำงานบน Web Browser (HTML5 WebRTC)";
-      badge.className = "inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-900 border border-slate-700 text-[11px] text-amber-300";
+      // 2. ถ้าเปิดบนคอมฯ / เว็บเบราว์เซอร์ภายนอก
+      badge.innerHTML = `🌐 Web Browser (${activeCompany})`;
+      badge.className = "text-[10px] px-2.5 py-1 rounded-full bg-slate-900 border border-slate-700 text-amber-400";
+
+      // ตรวจสอบว่าเคยยืนยันสิทธิ์ไว้ในเบราว์เซอร์นี้หรือยัง
+      const savedUser = localStorage.getItem(`auth_user_${activeCompany}`);
+      if (savedUser) {
+        const u = JSON.parse(savedUser);
+        setAuthenticatedState(u.display_name, u.line_user_id);
+      } else {
+        // บังคับแสดงหน้าจอ LINE QR Login บน PC
+        initPcLoginGate();
+      }
     });
 
-    // ฟังก์ชันเรียกกล้องสแกนแบบอัจฉริยะ (LINE scanCodeV2 หรือ Web Camera)
+    // เริ่มต้นระบบขอรหัส LINE Login ผ่าน QR บน PC
+    async function initPcLoginGate() {
+      document.getElementById('pcAuthGate').classList.remove('hidden');
+      document.getElementById('scannerMainUI').classList.add('hidden');
+
+      try {
+        const res = await fetch(`${API_BASE}/api/v1/scanner-auth/create-session`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ company_slug: activeCompany })
+        });
+        const data = await res.json();
+        currentSessionToken = data.session_token;
+
+        // ลิงก์ที่จะให้มือถือเปิด (วิ่งเข้า LINE เพื่อกดยืนยัน)
+        const targetLiffId = COMPANY_LIFF_MAP[activeCompany];
+        const authUrl = `https://liff.line.me/${targetLiffId}/admin/scanner.html?company=${activeCompany}&auth_session=${currentSessionToken}`;
+        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(authUrl)}`;
+        document.getElementById('pcAuthQrImg').src = qrUrl;
+
+        // เริ่มตรวจสอบว่ามือถือสแกนยืนยันหรือยัง
+        startPollingSession(currentSessionToken);
+      } catch (err) {
+        console.error("Init PC login failed:", err);
+      }
+    }
+
+    function startPollingSession(token) {
+      if (pollTimer) clearInterval(pollTimer);
+      pollTimer = setInterval(async () => {
+        try {
+          const res = await fetch(`${API_BASE}/api/v1/scanner-auth/check-session/${token}`);
+          const data = await res.json();
+          if (data.status === 'AUTHENTICATED') {
+            clearInterval(pollTimer);
+            localStorage.setItem(`auth_user_${activeCompany}`, JSON.stringify(data.user));
+            setAuthenticatedState(data.user.display_name, data.user.line_user_id);
+            document.getElementById('pcAuthGate').classList.add('hidden');
+            document.getElementById('scannerMainUI').classList.remove('hidden');
+          }
+        } catch (e) {}
+      }, 2000);
+    }
+
+    async function confirmPcSession(token, uid, name) {
+      await fetch(`${API_BASE}/api/v1/scanner-auth/confirm-auth`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_token: token, line_user_id: uid, display_name: name })
+      });
+      alert("✅ อนุมัติสิทธิ์เข้าใช้งานบนหน้าจอคอมพิวเตอร์เรียบร้อยแล้ว!");
+    }
+
+    function setAuthenticatedState(displayName, uid) {
+      document.getElementById('userInfoBar').classList.remove('hidden');
+      document.getElementById('dspLineUser').innerText = displayName;
+    }
+
+    function logoutAuth() {
+      localStorage.removeItem(`auth_user_${activeCompany}`);
+      window.location.reload();
+    }
+
+    // การสั่งเปิดกล้องสแกน (Hybrid)
     async function triggerUniversalScan() {
-      // 1. ถ้าเปิดอยู่ใน LINE App และเปิดสิทธิ์ scanCode ไว้
       if (isLiffReady && liff.scanCodeV2) {
         try {
           const result = await liff.scanCodeV2();
@@ -120,15 +246,12 @@
             return;
           }
         } catch (err) {
-          console.warn("LINE Scanner cancelled or failed, falling back to web camera:", err);
+          console.warn("LINE Scan cancel/error, switching to web cam:", err);
         }
       }
-
-      // 2. ถ้าเปิดใน Web ทั่วไป หรือ LINE scanCode ปิดหน้าต่าง ให้เปิดกล้อง Web
       toggleWebCamera(true);
     }
 
-    // ฟังก์ชันเปิด/ปิดกล้อง Web Browser
     function toggleWebCamera(forceOpen = false) {
       const container = document.getElementById('webCameraContainer');
       const btn = document.getElementById('btnWebFallback');
@@ -137,7 +260,7 @@
         if (html5QrScanner) {
           html5QrScanner.stop().then(() => {
             container.classList.add('hidden');
-            btn.innerText = "📱 สลับเป็นกล้องเว็บเบราว์เซอร์";
+            btn.innerText = "💻 สลับโหมดกล้องเว็บ / เว็บแคม PC";
             isWebCamActive = false;
           });
         }
@@ -147,29 +270,24 @@
         isWebCamActive = true;
 
         html5QrScanner = new Html5Qrcode("webReader");
-        const config = { fps: 15, qrbox: { width: 260, height: 180 } };
-
         html5QrScanner.start(
           { facingMode: "environment" },
-          config,
-          (decodedText) => {
-            handleScanSuccess(decodedText);
-            toggleWebCamera(); // ปิดกล้องหลังสแกนติด
+          { fps: 15, qrbox: { width: 260, height: 180 } },
+          (code) => {
+            handleScanSuccess(code);
+            toggleWebCamera();
           },
           (err) => {}
-        ).catch(err => {
-          alert("ไม่สามารถเข้าถึงกล้องได้: โปรดอนุญาตสิทธิ์การใช้กล้องบนเบราว์เซอร์");
+        ).catch(e => {
+          alert("ไม่สามารถเข้าถึงกล้อง/เว็บแคมได้ กรุณาอนุญาตสิทธิ์การใช้กล้อง");
           container.classList.add('hidden');
           isWebCamActive = false;
         });
       }
     }
 
-    // ประมวลผลรหัสที่สแกนได้
     async function handleScanSuccess(rawCode) {
-      if (window.navigator.vibrate) window.navigator.vibrate(120);
-
-      currentScannedData = rawCode.trim();
+      if (window.navigator.vibrate) window.navigator.vibrate(100);
       const card = document.getElementById('scanResultCard');
       const txtCode = document.getElementById('resScannedCode');
       const txtType = document.getElementById('resActionType');
@@ -177,120 +295,34 @@
       const btnExec = document.getElementById('btnExecuteAction');
 
       card.classList.remove('hidden');
-      txtCode.innerText = currentScannedData;
+      txtCode.innerText = rawCode;
 
-      // วิเคราะห์ประเภทของบาร์โค้ด/QR Code
-      if (currentScannedData.startsWith("http://") || currentScannedData.startsWith("https://")) {
-        // กรณีเป็น URL ลิงก์สมัครสมาชิก / ลิงก์ปักตะกร้า
-        txtType.innerText = "ลิงก์เว็บ / คิวอาร์สมัครสมาชิก";
-        txtDetails.innerHTML = `<p class="text-slate-300">พบลิงก์ภายนอก: ${currentScannedData}</p>`;
-        btnExec.innerText = "เปิดลิงก์ทันที ➔";
-        btnExec.onclick = () => window.location.href = currentScannedData;
-      } 
-      else if (currentScannedData.startsWith("290-") || currentScannedData.startsWith("FOOD-") || currentScannedData.startsWith("SKIN-")) {
-        // กรณีเป็นสินค้า หรือ ป้ายเหลืองลดราคา
-        txtType.innerText = "สินค้า / บาร์โค้ดป้ายเหลือง";
-        txtDetails.innerHTML = `<p class="text-slate-400">กำลังตรวจสอบข้อมูลสินค้าและอายุล็อต (FEFO Shield)...</p>`;
-        
-        try {
-          const res = await fetch(`${API_BASE}/api/v1/admin/inventory/pos-check-item`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ barcode_or_sku: currentScannedData, company_slug: 'tp_extra' })
-          });
-          const data = await res.json();
-          if (data.is_allowed) {
-            txtDetails.innerHTML = `
-              <b class="text-white block text-sm">${data.product_name}</b>
-              <span class="text-amber-400 font-mono text-sm block">ราคา: ฿${data.price.toFixed(2)}</span>
-              <span class="text-[11px] text-emerald-400">ล็อต: ${data.lot_no} (หมดอายุ: ${data.expiry_date})</span>
-            `;
-            
-            const userStr = sessionStorage.getItem("pro_user");
-            const isStaff = userStr && JSON.parse(userStr).role === "CASHIER";
+      // ตรวจสอบสินค้าตาม company_slug ที่กำลังเลือกอยู่
+      try {
+        const res = await fetch(`${API_BASE}/api/v1/admin/inventory/pos-check-item`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ barcode_or_sku: rawCode, company_slug: activeCompany })
+        });
+        const data = await res.json();
 
-            if (isStaff) {
-              btnExec.innerText = "ส่งยอดเข้าหน้าคิดเงิน POS ➔";
-              btnExec.onclick = () => window.location.href = `pos.html?sku=${data.sku}&price=${data.price}`;
-            } else {
-              // โหมดลูกค้าทั่วไป: การ์ดสินค้า + ปุ่มปักตะกร้า / ชวนเพื่อน
-              txtType.innerText = "🔎 ข้อมูลและสรรพคุณสินค้า";
-              
-              const hasCommission = data.commission_rate && data.commission_rate > 0;
-              const commText = hasCommission 
-                ? `<span class="px-2 py-0.5 bg-pink-100 text-pink-700 rounded-full font-bold text-[10px]">✨ มีค่าแนะนำ ${data.commission_rate}%</span>`
-                : `<span class="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full font-bold text-[10px]">🤝 ชวนเพื่อนผูกสายงาน</span>`;
-
-              txtDetails.innerHTML = `
-                <div class="space-y-2 pt-1">
-                  <div class="flex justify-between items-start">
-                    <b class="text-amber-400 text-base block">${data.product_name}</b>
-                    ${commText}
-                  </div>
-                  <div class="flex justify-between items-center py-1 border-b border-slate-800">
-                    <span class="text-slate-400">ราคาขาย:</span>
-                    <b class="text-white text-lg font-mono">฿${data.price.toFixed(2)}</b>
-                  </div>
-                  <!-- กล่องคะแนนดาวและรีวิว Social Proof -->
-                  <div class="bg-amber-950/40 border border-amber-500/30 rounded-xl p-2.5 space-y-1">
-                    <div class="flex items-center justify-between">
-                      <div class="flex items-center gap-1">
-                        <span class="text-amber-400 text-sm font-black">★ ${data.rating_score || "4.9"}</span>
-                        <div class="text-amber-400 text-xs">★★★★★</div>
-                        <span class="text-[10px] text-slate-400">(${data.total_reviews || "128"} รีวิว)</span>
-                      </div>
-                      <span class="px-1.5 py-0.5 bg-emerald-500/20 text-emerald-300 text-[9px] font-bold rounded border border-emerald-500/30">
-                        ✓ ซื้อซ้ำ 96%
-                      </span>
-                    </div>
-                    <p class="text-[11px] text-amber-200/90 italic font-medium">
-                      💬 "${data.highlight_review || "ใช้ดีมาก สั่งซ้ำรอบที่ 3 แล้ว แนะนำเลยค่ะ"}"
-                    </p>
-                  </div>
-                  <div class="text-[11px] text-slate-300 space-y-1">
-                    <p class="text-emerald-400">✓ สินค้าแท้คลังส่วนกลาง มี อย. รับรอง</p>
-                    <p class="text-slate-400">ล็อตผลิต: ${data.lot_no || "N/A"} (ควบคุม FEFO ล็อตสดใหม่)</p>
-                  </div>
-                  <div class="p-2.5 bg-slate-950 rounded-xl border border-slate-800 text-[10px] text-slate-400">
-                    💡 แชร์สินค้านี้ให้เพื่อน: เพื่อนได้สินค้าคุณภาพ คุณได้ขยายเครือข่ายสมาชิกทันที
-                  </div>
-                </div>
-              `;
-
-              if (hasCommission) {
-                btnExec.innerText = `🛒 ปักตะกร้าแชร์สินค้านี้ (รับ ${data.commission_rate}%)`;
-                btnExec.className = "flex-1 bg-gradient-to-r from-pink-600 to-rose-500 hover:from-pink-500 hover:to-rose-400 text-white font-bold py-2.5 rounded-xl text-xs transition shadow-lg";
-                btnExec.onclick = () => window.location.href = `affiliate.html?sku=${data.sku}`;
-              } else {
-                btnExec.innerText = "🤝 แชร์ชวนเพื่อนรับสิทธิ์สมาชิก";
-                btnExec.className = "flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold py-2.5 rounded-xl text-xs transition shadow-lg";
-                btnExec.onclick = () => window.location.href = `member_card.html?product_ref=${data.sku}`;
-              }
-            }
-
-            btnExec.onclick = () => window.location.href = `pos.html?sku=${data.sku}&price=${data.price}`;
-          } else {
-            txtDetails.innerHTML = `<b class="text-rose-400 block">${data.block_reason}</b>`;
-            btnExec.innerText = "สินค้าถูกล็อกห้ามจำหน่าย";
-            btnExec.disabled = true;
-          }
-        } catch (e) {
-          txtDetails.innerText = "ตรวจสอบสินค้าไม่สำเร็จ";
+        if (data.is_allowed) {
+          txtType.innerText = `สินค้า (${activeCompany})`;
+          txtDetails.innerHTML = `
+            <b class="text-white block">${data.product_name}</b>
+            <span class="text-amber-400 font-mono text-sm block">฿${data.price.toFixed(2)}</span>
+            <span class="text-[11px] text-emerald-400">ล็อต: ${data.lot_no} (หมดอายุ: ${data.expiry_date})</span>
+          `;
+          btnExec.innerText = "ส่งยอดเข้าหน้าคิดเงิน POS ➔";
+          btnExec.onclick = () => window.location.href = `pos.html?sku=${data.sku}&price=${data.price}&company=${activeCompany}`;
+        } else {
+          txtType.innerText = "แจ้งเตือนการสแกน";
+          txtDetails.innerHTML = `<b class="text-rose-400">${data.block_reason || "รหัสนี้ไม่ตรงกับสต็อกของบริษัทที่เลือก"}</b>`;
+          btnExec.innerText = "ปิดหน้าต่าง";
+          btnExec.onclick = () => card.classList.add('hidden');
         }
-      } 
-      else if (currentScannedData.startsWith("CC-") || currentScannedData.startsWith("QR-PICK-")) {
-        // กรณีเป็นคิวอาร์รับพัสดุพรีออเดอร์
-        txtType.innerText = "พัสดุพรีออเดอร์ Click & Collect";
-        txtDetails.innerHTML = `<p class="text-slate-300">รหัสรับพัสดุหน้าร้าน: <b>${currentScannedData}</b></p>`;
-        btnExec.innerText = "ยืนยันส่งมอบพัสดุให้ลูกค้า ➔";
-        btnExec.onclick = () => window.location.href = `shelf.html?pickup=${currentScannedData}`;
-      } 
-      else {
-        // รหัสทั่วไป
-        txtType.innerText = "รหัสบาร์โค้ดทั่วไป";
-        txtDetails.innerHTML = `<p class="text-slate-400">รหัส: ${currentScannedData}</p>`;
-        btnExec.innerText = "ค้นหาข้อมูลในระบบ";
-        btnExec.onclick = () => alert("สแกนสำเร็จ: " + currentScannedData);
+      } catch (e) {
+        txtDetails.innerText = "อ่านรหัสสำเร็จ แต่ไม่สามารถตรวจสอบสต็อกได้";
       }
     }
   </script>
