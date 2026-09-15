@@ -1756,3 +1756,75 @@ def api_sign_second_key(payload: SignSecondKeyRequest, admin_key: str = Depends(
             )
         conn.commit()
     return {"status": "success", "message": f"ลงนามกุญแจดอกที่สองคำขอ {payload.ticket_no} เป็นสถานะ {new_status} สำเร็จ"}
+
+
+import hashlib
+
+def verify_user_pwd(plain: str, hashed: str) -> bool:
+    calc = hashlib.sha256(f"PRO_NEXUS_SALT_2026_{plain}".encode("utf-8")).hexdigest()
+    return calc == hashed
+
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+@router.post("/auth/login")
+def api_user_login(payload: LoginRequest):
+    with get_db_connection() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT id, username, password_hash, full_name, emp_code, role, branch_id, is_active
+                FROM system_users
+                WHERE username = %s;
+                """,
+                (payload.username,)
+            )
+            user = cursor.fetchone()
+
+            if not user or not verify_user_pwd(payload.password, user["password_hash"]):
+                raise HTTPException(status_code=401, detail="ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง")
+
+            if not user["is_active"]:
+                raise HTTPException(status_code=403, detail="บัญชีผู้ใช้นี้ถูกระงับสิทธิ์การใช้งาน")
+
+            # ดึงหน้าที่อนุญาตให้เข้าถึง
+            cursor.execute(
+                """
+                SELECT allowed_page FROM role_page_permissions WHERE role = %s;
+                """,
+                (user["role"],)
+            )
+            pages = [p["allowed_page"] for p in cursor.fetchall()]
+
+            # อัปเดตเวลาล็อกอินล่าสุด
+            cursor.execute("UPDATE system_users SET last_login_at = NOW() WHERE id = %s;", (user["id"],))
+        conn.commit()
+
+    return {
+        "status": "success",
+        "user": {
+            "username": user["username"],
+            "full_name": user["full_name"],
+            "emp_code": user["emp_code"],
+            "role": user["role"],
+            "branch_id": user["branch_id"],
+            "allowed_pages": pages
+        },
+        "session_token": f"PRO_TOKEN_{user[role]}_{user[emp_code]}"
+    }
+
+@router.get("/auth/check-access")
+def api_check_page_access(role: str, page: str):
+    with get_db_connection() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT COUNT(*) as allowed FROM role_page_permissions
+                WHERE role = %s AND allowed_page = %s;
+                """,
+                (role, page)
+            )
+            res = cursor.fetchone()
+            is_allowed = res["allowed"] > 0 or role == "AUDIT_EXEC"
+    return {"status": "success", "is_allowed": is_allowed}

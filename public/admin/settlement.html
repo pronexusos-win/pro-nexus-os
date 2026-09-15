@@ -15,6 +15,25 @@
       #printableSlip { position: absolute; left: 0; top: 0; width: 100%; }
     }
   </style>
+
+<script>
+  (function() {
+    const userStr = sessionStorage.getItem("pro_user");
+    if (!userStr && !window.location.pathname.includes("login.html")) {
+      window.location.href = "login.html";
+      return;
+    }
+    if (userStr) {
+      const user = JSON.parse(userStr);
+      const currentPage = window.location.pathname.split("/").pop();
+      if (user.role !== "AUDIT_EXEC" && currentPage && !user.allowed_pages.includes(currentPage) && currentPage !== "login.html") {
+        alert("⛔ ปฏิเสธการเข้าถึง: บทบาท " + user.role + " ไม่มีสิทธิ์เข้าใช้งานหน้า " + currentPage);
+        window.location.href = user.allowed_pages[0] || "login.html";
+      }
+    }
+  })();
+</script>
+
 </head>
 <body class="bg-slate-100 min-h-screen text-slate-800 p-4 sm:p-8">
 
