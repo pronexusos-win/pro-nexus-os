@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart Scanner - Pro Nexus OS</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- LINE LIFF SDK -->
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <!-- Web Fallback Scanner -->
+  <script src="https://unpkg.com/html5-qrcode"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&family=Prompt:wght@500;700;900&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Sarabun', sans-serif; }
+    .display-font { font-family: 'Prompt', sans-serif; }
+  </style>
+</head>
+<body class="bg-slate-950 min-h-screen text-slate-100 flex flex-col justify-between p-4">
+
+  <!-- ส่วนหัวแสดงสถานะระบบสแกน -->
+  <header class="text-center space-y-1 pt-2">
+    <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-900 border border-slate-800 text-[11px] text-slate-400">
+      <span id="scannerEngineBadge">กำลังตรวจสอบช่องทางสแกน...</span>
+    </div>
+    <h1 class="display-font text-xl font-bold text-white tracking-wide">PRO NEXUS SMART SCANNER</h1>
+    <p class="text-xs text-slate-400">สแกนบาร์โค้ดสินค้า • ป้ายเหลืองลดราคา • คิวอาร์รับพัสดุ</p>
+  </header>
+
+  <!-- กล่องแสดงผลและช่องกล้องสแกน -->
+  <main class="max-w-md w-full mx-auto space-y-4 my-auto">
+
+    <!-- จุดแสดงกล้อง WebRTC (กรณีไม่ได้เปิดใน LINE) -->
+    <div id="webCameraContainer" class="hidden rounded-3xl overflow-hidden border-2 border-amber-400/60 bg-black shadow-2xl">
+      <div id="webReader" style="width: 100%; min-height: 250px;"></div>
+      <p class="text-[11px] text-center text-slate-400 py-2 bg-slate-900">ส่องกล้องให้เห็นบาร์โค้ดหรือ QR Code ชัดเจน</p>
+    </div>
+
+    <!-- ปุ่มกดเปิดกล้องสแกน (ทำงานอัตโนมัติทั้ง LINE และ Web) -->
+    <div class="space-y-3">
+      <button onclick="triggerUniversalScan()" id="btnMainScan" class="w-full bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 text-slate-950 font-black py-4 rounded-2xl transition shadow-xl text-base flex items-center justify-center gap-2">
+        <span class="text-xl">📷</span>
+        <span>แตะเพื่อเปิดกล้องสแกน</span>
+      </button>
+
+      <!-- ปุ่มเปิดกล้องของเว็บสำรอง -->
+      <button onclick="toggleWebCamera()" id="btnWebFallback" class="w-full bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-300 font-bold py-2.5 rounded-xl text-xs transition">
+        📱 สลับเป็นกล้องเว็บเบราว์เซอร์
+      </button>
+    </div>
+
+    <!-- กล่องแสดงผลลัพธ์หลังสแกนเสร็จ -->
+    <div id="scanResultCard" class="hidden p-5 rounded-2xl border border-slate-800 bg-slate-900 space-y-3">
+      <div class="flex justify-between items-start">
+        <div>
+          <span class="text-[10px] text-slate-400 uppercase block font-bold">รหัสที่ตรวจพบ:</span>
+          <b id="resScannedCode" class="text-amber-400 font-mono text-base break-all"></b>
+        </div>
+        <span id="resActionType" class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-800 text-slate-300"></span>
+      </div>
+      <div id="resActionDetails" class="text-xs text-slate-300 border-t border-slate-800 pt-2 space-y-1"></div>
+      <div class="pt-1 flex gap-2">
+        <button onclick="executeAction()" id="btnExecuteAction" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 rounded-xl text-xs transition">
+          ดำเนินการต่อ
+        </button>
+        <button onclick="triggerUniversalScan()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl text-xs transition">
+          สแกนใหม่
+        </button>
+      </div>
+    </div>
+
+  </main>
+
+  <footer class="text-center text-[11px] text-slate-500 pb-2">
+    รองรับทั้งกล้อง LINE Native Scanner และ HTML5 WebRTC Camera
+  </footer>
+
+  <script>
+    const API_BASE = window.location.origin.includes('localhost') 
+      ? 'http://localhost:8000' 
+      : 'https://pro-nexus-os-production.up.railway.app';
+
+    // ใส่ LIFF ID ที่สร้างไว้บน LINE Developers Console (ถ้ามี)
+    const MY_LIFF_ID = "YOUR_LIFF_ID_HERE"; 
+
+    let isLiffReady = false;
+    let html5QrScanner = null;
+    let isWebCamActive = false;
+    let currentScannedData = null;
+
+    // เริ่มต้นระบบตรวจสอบสภาพแวดล้อม
+    window.addEventListener('DOMContentLoaded', async () => {
+      const badge = document.getElementById('scannerEngineBadge');
+      
+      try {
+        if (typeof liff !== 'undefined' && MY_LIFF_ID !== "YOUR_LIFF_ID_HERE") {
+          await liff.init({ liffId: MY_LIFF_ID });
+          if (liff.isInClient()) {
+            isLiffReady = true;
+            badge.innerHTML = "🟢 ทำงานบน LINE App (LINE Native Scanner)";
+            badge.className = "inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-950 border border-emerald-700 text-[11px] text-emerald-300";
+            return;
+          }
+        }
+      } catch (err) {
+        console.log("LIFF Init fallback:", err);
+      }
+
+      badge.innerHTML = "🌐 ทำงานบน Web Browser (HTML5 WebRTC)";
+      badge.className = "inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-900 border border-slate-700 text-[11px] text-amber-300";
+    });
+
+    // ฟังก์ชันเรียกกล้องสแกนแบบอัจฉริยะ (LINE scanCodeV2 หรือ Web Camera)
+    async function triggerUniversalScan() {
+      // 1. ถ้าเปิดอยู่ใน LINE App และเปิดสิทธิ์ scanCode ไว้
+      if (isLiffReady && liff.scanCodeV2) {
+        try {
+          const result = await liff.scanCodeV2();
+          if (result && result.value) {
+            handleScanSuccess(result.value);
+            return;
+          }
+        } catch (err) {
+          console.warn("LINE Scanner cancelled or failed, falling back to web camera:", err);
+        }
+      }
+
+      // 2. ถ้าเปิดใน Web ทั่วไป หรือ LINE scanCode ปิดหน้าต่าง ให้เปิดกล้อง Web
+      toggleWebCamera(true);
+    }
+
+    // ฟังก์ชันเปิด/ปิดกล้อง Web Browser
+    function toggleWebCamera(forceOpen = false) {
+      const container = document.getElementById('webCameraContainer');
+      const btn = document.getElementById('btnWebFallback');
+
+      if (isWebCamActive && !forceOpen) {
+        if (html5QrScanner) {
+          html5QrScanner.stop().then(() => {
+            container.classList.add('hidden');
+            btn.innerText = "📱 สลับเป็นกล้องเว็บเบราว์เซอร์";
+            isWebCamActive = false;
+          });
+        }
+      } else {
+        container.classList.remove('hidden');
+        btn.innerText = "✕ ปิดกล้องเว็บ";
+        isWebCamActive = true;
+
+        html5QrScanner = new Html5Qrcode("webReader");
+        const config = { fps: 15, qrbox: { width: 260, height: 180 } };
+
+        html5QrScanner.start(
+          { facingMode: "environment" },
+          config,
+          (decodedText) => {
+            handleScanSuccess(decodedText);
+            toggleWebCamera(); // ปิดกล้องหลังสแกนติด
+          },
+          (err) => {}
+        ).catch(err => {
+          alert("ไม่สามารถเข้าถึงกล้องได้: โปรดอนุญาตสิทธิ์การใช้กล้องบนเบราว์เซอร์");
+          container.classList.add('hidden');
+          isWebCamActive = false;
+        });
+      }
+    }
+
+    // ประมวลผลรหัสที่สแกนได้
+    async function handleScanSuccess(rawCode) {
+      if (window.navigator.vibrate) window.navigator.vibrate(120);
+
+      currentScannedData = rawCode.trim();
+      const card = document.getElementById('scanResultCard');
+      const txtCode = document.getElementById('resScannedCode');
+      const txtType = document.getElementById('resActionType');
+      const txtDetails = document.getElementById('resActionDetails');
+      const btnExec = document.getElementById('btnExecuteAction');
+
+      card.classList.remove('hidden');
+      txtCode.innerText = currentScannedData;
+
+      // วิเคราะห์ประเภทของบาร์โค้ด/QR Code
+      if (currentScannedData.startsWith("http://") || currentScannedData.startsWith("https://")) {
+        // กรณีเป็น URL ลิงก์สมัครสมาชิก / ลิงก์ปักตะกร้า
+        txtType.innerText = "ลิงก์เว็บ / คิวอาร์สมัครสมาชิก";
+        txtDetails.innerHTML = `<p class="text-slate-300">พบลิงก์ภายนอก: ${currentScannedData}</p>`;
+        btnExec.innerText = "เปิดลิงก์ทันที ➔";
+        btnExec.onclick = () => window.location.href = currentScannedData;
+      } 
+      else if (currentScannedData.startsWith("290-") || currentScannedData.startsWith("FOOD-") || currentScannedData.startsWith("SKIN-")) {
+        // กรณีเป็นสินค้า หรือ ป้ายเหลืองลดราคา
+        txtType.innerText = "สินค้า / บาร์โค้ดป้ายเหลือง";
+        txtDetails.innerHTML = `<p class="text-slate-400">กำลังตรวจสอบข้อมูลสินค้าและอายุล็อต (FEFO Shield)...</p>`;
+        
+        try {
+          const res = await fetch(`${API_BASE}/api/v1/admin/inventory/pos-check-item`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ barcode_or_sku: currentScannedData, company_slug: 'tp_extra' })
+          });
+          const data = await res.json();
+          if (data.is_allowed) {
+            txtDetails.innerHTML = `
+              <b class="text-white block text-sm">${data.product_name}</b>
+              <span class="text-amber-400 font-mono text-sm block">ราคา: ฿${data.price.toFixed(2)}</span>
+              <span class="text-[11px] text-emerald-400">ล็อต: ${data.lot_no} (หมดอายุ: ${data.expiry_date})</span>
+            `;
+            btnExec.innerText = "ส่งยอดเข้าหน้าคิดเงิน POS ➔";
+            btnExec.onclick = () => window.location.href = `pos.html?sku=${data.sku}&price=${data.price}`;
+          } else {
+            txtDetails.innerHTML = `<b class="text-rose-400 block">${data.block_reason}</b>`;
+            btnExec.innerText = "สินค้าถูกล็อกห้ามจำหน่าย";
+            btnExec.disabled = true;
+          }
+        } catch (e) {
+          txtDetails.innerText = "ตรวจสอบสินค้าไม่สำเร็จ";
+        }
+      } 
+      else if (currentScannedData.startsWith("CC-") || currentScannedData.startsWith("QR-PICK-")) {
+        // กรณีเป็นคิวอาร์รับพัสดุพรีออเดอร์
+        txtType.innerText = "พัสดุพรีออเดอร์ Click & Collect";
+        txtDetails.innerHTML = `<p class="text-slate-300">รหัสรับพัสดุหน้าร้าน: <b>${currentScannedData}</b></p>`;
+        btnExec.innerText = "ยืนยันส่งมอบพัสดุให้ลูกค้า ➔";
+        btnExec.onclick = () => window.location.href = `shelf.html?pickup=${currentScannedData}`;
+      } 
+      else {
+        // รหัสทั่วไป
+        txtType.innerText = "รหัสบาร์โค้ดทั่วไป";
+        txtDetails.innerHTML = `<p class="text-slate-400">รหัส: ${currentScannedData}</p>`;
+        btnExec.innerText = "ค้นหาข้อมูลในระบบ";
+        btnExec.onclick = () => alert("สแกนสำเร็จ: " + currentScannedData);
+      }
+    }
+  </script>
+</body>
+</html>
