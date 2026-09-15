@@ -293,4 +293,4 @@ def reset_company_data(req: ResetRequest):
         conn.close()
 
 app.include_router(scanner_auth_router, prefix="/api/v1")
-    app.include_router(admin_router)
+app.include_router(admin_router)
