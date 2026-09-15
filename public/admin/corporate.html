@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Corporate Governance & Dividend Hub - Pro Nexus OS</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&family=Prompt:wght@500;700;900&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Sarabun', sans-serif; }
+    .display-font { font-family: 'Prompt', sans-serif; }
+  </style>
+</head>
+<body class="bg-slate-100 min-h-screen text-slate-800 p-4 sm:p-8">
+
+  <header class="max-w-6xl mx-auto mb-6 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-4">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-indigo-700 flex items-center justify-center text-white text-xl font-black">📈</div>
+      <div>
+        <h1 class="display-font text-lg font-bold text-slate-900">CORPORATE GOVERNANCE & DIVIDEND ENGINE</h1>
+        <p class="text-xs text-slate-400">โครงสร้างผลตอบแทนกรรมการ • สมุดทะเบียนหุ้น • คำนวณเงินปันผล & ภาษีมาตรฐาน IPO</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-2">
+      <a href="index.html" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-600 px-3 py-2 rounded-lg font-semibold transition">
+        ← กลับหน้า Admin
+      </a>
+      <button onclick="loadCorporateData()" class="text-xs bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 rounded-lg font-semibold transition">
+        🔄 รีเฟรชข้อมูล
+      </button>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto space-y-6">
+
+    <!-- แผงสรุปนโยบายและภาษี (Tax Policy Matrix) -->
+    <section class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-2">
+        <div class="flex items-center gap-2">
+          <span class="text-emerald-600 text-lg">💼</span>
+          <h3 class="display-font font-bold text-sm text-slate-900">เงินเดือนกรรมการ (Executive Salary - ม. 40(1))</h3>
+        </div>
+        <p class="text-xs text-slate-500 leading-relaxed">
+          • ถือเป็น<b>ค่าใช้จ่ายของบริษัท 100%</b> ช่วยประหยัดภาษีนิติบุคคล (CIT 20%)<br>
+          • ผู้บริหารเสียภาษีเงินได้บุคคลธรรมดาตามอัตราก้าวหน้า หัก ณ ที่จ่าย ภ.ง.ด. 1 ทุกเดือน<br>
+          • <b>เกณฑ์ IPO:</b> ต้องมีมติคณะกรรมการกำหนดค่าตอบแทนรองรับ ป้องกันผลประโยชน์ทับซ้อน
+        </p>
+      </div>
+
+      <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-2">
+        <div class="flex items-center gap-2">
+          <span class="text-indigo-600 text-lg">📊</span>
+          <h3 class="display-font font-bold text-sm text-slate-900">เงินปันผลผู้ถือหุ้น (Dividend - ม. 40(4)(ข))</h3>
+        </div>
+        <p class="text-xs text-slate-500 leading-relaxed">
+          • จ่ายจากกำไรสะสมหลังหักสำรองตามกฎหมาย 5% และเสียภาษีนิติบุคคลแล้ว<br>
+          • <b>หักภาษี ณ ที่จ่าย 10% (Final Tax)</b> หรือนำไปยื่นขอ<b>เครดิตภาษีเงินปันผลคืน</b>ได้<br>
+          • <b>เกณฑ์ IPO:</b> มีนโยบายการจ่ายปันผลโปร่งใสตามมติที่ประชุมใหญ่ผู้ถือหุ้น (AGM)
+        </p>
+      </div>
+    </section>
+
+    <!-- ทะเบียนกรรมการและผู้ถือหุ้น (Directors & Shareholder Register) -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      
+      <!-- บอร์ดกรรมการ -->
+      <section class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between">
+        <div>
+          <div class="flex justify-between items-center border-b border-slate-100 pb-3 mb-3">
+            <h3 class="display-font font-bold text-sm text-slate-900">👔 คณะกรรมการและผู้บริหาร (Directors)</h3>
+            <span class="text-[11px] bg-slate-100 text-slate-600 px-2.5 py-0.5 rounded-full font-semibold">BOD Registry</span>
+          </div>
+          <div id="directorsList" class="space-y-3 text-xs"></div>
+        </div>
+      </section>
+
+      <!-- ทะเบียนผู้ถือหุ้น -->
+      <section class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between">
+        <div>
+          <div class="flex justify-between items-center border-b border-slate-100 pb-3 mb-3">
+            <h3 class="display-font font-bold text-sm text-slate-900">📜 สมุดทะเบียนผู้ถือหุ้น (Shareholder Register)</h3>
+            <span class="text-[11px] bg-indigo-50 text-indigo-700 px-2.5 py-0.5 rounded-full font-bold">100,000 หุ้น</span>
+          </div>
+          <div id="shareholdersList" class="space-y-3 text-xs"></div>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- เครื่องมือจำลองและประกาศจ่ายเงินปันผลตามกฎหมาย (Dividend Engine) -->
+    <section class="bg-white p-6 rounded-2xl border border-indigo-200 shadow-sm space-y-4">
+      <div class="flex justify-between items-center border-b border-slate-100 pb-4">
+        <div>
+          <h2 class="display-font font-bold text-base text-slate-900">💰 ระบบประกาศจัดสรรเงินปันผล (Dividend Declaration Engine)</h2>
+          <p class="text-xs text-slate-400">คำนวณหักเงินสำรองตามกฎหมาย 5% และหักภาษี ณ ที่จ่าย 10% ออกเอกสาร 50 ทวิอัตโนมัติ</p>
+        </div>
+        <span class="px-3 py-1 bg-emerald-100 text-emerald-800 text-xs font-bold rounded-full">มาตรฐาน พ.ร.บ. มหาชน 🟢</span>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+        <div>
+          <label class="text-slate-500 block mb-1">รหัสรอบประกาศปันผล:</label>
+          <input type="text" id="divCode" value="DIV-2026-Q3" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 font-mono font-bold">
+        </div>
+        <div>
+          <label class="text-slate-500 block mb-1">กำไรสุทธิประจำงวด (บาท):</label>
+          <input type="number" id="netProfitInput" value="1000000" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 font-mono font-bold">
+        </div>
+        <div>
+          <label class="text-slate-500 block mb-1">ยอดเงินปันผลที่ต้องการจ่าย (บาท):</label>
+          <input type="number" id="divPoolInput" value="400000" class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 font-mono font-bold">
+        </div>
+      </div>
+
+      <div class="pt-2 flex justify-between items-center">
+        <p class="text-[11px] text-slate-400">* ระบบจะกันสำรองตามกฎหมาย 5% (฿50,000) เข้ากองทุนสำรองของบริษัทโดยอัตโนมัติ</p>
+        <button onclick="submitDividendDeclaration()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl font-bold text-xs shadow-md transition">
+          🚀 ประกาศจ่ายปันผล & คำนวณ WHT 10%
+        </button>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    const API_BASE = window.location.origin.includes('localhost') 
+      ? 'http://localhost:8000' 
+      : 'https://pro-nexus-os-production.up.railway.app';
+
+    async function loadCorporateData() {
+      const token = sessionStorage.getItem('admin_passcode') || 'admin1234';
+
+      try {
+        const res = await fetch(`${API_BASE}/api/v1/admin/corporate/governance-summary?company=tp_extra`, {
+          headers: { 'x-admin-key': token }
+        });
+        const data = await res.json();
+        if (data.status === 'success') {
+          renderDirectors(data.directors || []);
+          renderShareholders(data.shareholders || []);
+        }
+      } catch (err) {
+        console.error("Load governance error:", err);
+      }
+    }
+
+    function renderDirectors(directors) {
+      const container = document.getElementById('directorsList');
+      if (directors.length === 0) { container.innerHTML = '<p class="text-slate-400">ไม่มีข้อมูลกรรมการ</p>'; return; }
+      container.innerHTML = directors.map(d => `
+        <div class="p-3.5 rounded-xl border border-slate-200 bg-slate-50 flex justify-between items-center">
+          <div>
+            <span class="font-bold text-slate-900 block">${d.full_name}</span>
+            <span class="text-[11px] text-slate-500">${d.position} • เลขมติ: ${d.board_resolution_ref}</span>
+            <span class="text-[10px] text-emerald-600 font-semibold block mt-0.5">รูปแบบที่เลือก: ${d.compensation_choice}</span>
+          </div>
+          <div class="text-right">
+            <span class="text-[11px] text-slate-400 block">เงินเดือนอนุมัติ</span>
+            <b class="text-sm font-mono text-slate-900">฿${parseFloat(d.approved_monthly_salary).toLocaleString()}/ด.</b>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function renderShareholders(shareholders) {
+      const container = document.getElementById('shareholdersList');
+      if (shareholders.length === 0) { container.innerHTML = '<p class="text-slate-400">ไม่มีข้อมูลผู้ถือหุ้น</p>'; return; }
+      container.innerHTML = shareholders.map(sh => `
+        <div class="p-3.5 rounded-xl border border-slate-200 bg-slate-50 flex justify-between items-center">
+          <div>
+            <span class="font-bold text-slate-900 block">${sh.full_name}</span>
+            <span class="text-[11px] text-slate-500">ประเภทหุ้น: <b>${sh.share_type}</b> • พาร์ ฿${sh.par_value}</span>
+          </div>
+          <div class="text-right">
+            <span class="text-xs font-mono font-bold text-indigo-700 block">${sh.total_shares.toLocaleString()} หุ้น</span>
+            <span class="text-[10px] text-slate-400 font-mono">สัดส่วน ${(sh.total_shares / 1000).toFixed(1)}%</span>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    async function submitDividendDeclaration() {
+      const token = sessionStorage.getItem('admin_passcode') || 'admin1234';
+      const code = document.getElementById('divCode').value;
+      const profit = parseFloat(document.getElementById('netProfitInput').value);
+      const pool = parseFloat(document.getElementById('divPoolInput').value);
+
+      if (!confirm(`ยืนยันการประกาศจ่ายเงินปันผลรอบ ${code} จำนวน ฿${pool.toLocaleString()} บาท?`)) return;
+
+      const today = new Date().toISOString().slice(0, 10);
+      try {
+        const res = await fetch(`${API_BASE}/api/v1/admin/corporate/declare-dividend`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-admin-key': token
+          },
+          body: JSON.stringify({
+            declaration_no: code,
+            company_slug: 'tp_extra',
+            total_net_profit: profit,
+            dividend_pool_amount: pool,
+            resolution_date: today,
+            payout_date: today
+          })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          alert(`ประกาศจ่ายปันผลสำเร็จ!\n• เงินสำรองตามกฎหมาย (5%): ฿${data.legal_reserve_5pct.toLocaleString()}\n• ปันผลต่อหุ้น (DPS): ฿${data.dividend_per_share} บาท/หุ้น\n• กระจายภาษี WHT 10% เข้าบัญชีผู้ถือหุ้นเรียบร้อย`);
+          loadCorporateData();
+        } else {
+          alert("ข้อผิดพลาด: " + data.detail);
+        }
+      } catch (err) {
+        alert("ไม่สามารถติดต่อเซิร์ฟเวอร์ได้");
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', loadCorporateData);
+  </script>
+</body>
+</html>

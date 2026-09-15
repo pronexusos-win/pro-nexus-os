@@ -649,3 +649,96 @@ def authorize_void_with_audit(payload: DualAuthVoidRequest):
         "status": "success",
         "message": f"อนุมัติยกเลิกบิล {payload.order_no} โดยผู้จัดการ MGR-001 สำเร็จ พร้อมบันทึก Audit Log เรียบร้อย"
     }
+
+
+class DeclareDividendRequest(BaseModel):
+    declaration_no: str
+    company_slug: str = "tp_extra"
+    total_net_profit: float
+    dividend_pool_amount: float
+    resolution_date: str
+    payout_date: str
+
+@router.post("/corporate/declare-dividend")
+def declare_and_calculate_dividend(payload: DeclareDividendRequest, admin_key: str = Depends(verify_admin_key)):
+    # 1. คำนวณเงินสำรองตามกฎหมาย 5% ตามประมวลกฎหมายแพ่งและพาณิชย์ / พ.ร.บ. บริษัทมหาชน
+    legal_reserve = round(payload.total_net_profit * 0.05, 2)
+    max_distributable = payload.total_net_profit - legal_reserve
+    if payload.dividend_pool_amount > max_distributable:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"ยอดปันผลเกินเพดานที่จัดสรรได้ (กำไรสุทธิหลังหักสำรองกฎหมาย 5% เหลือ ฿{max_distributable:,.2f})"
+        )
+
+    with get_db_connection() as conn:
+        with conn.cursor() as cursor:
+            # ดึงหุ้นทั้งหมดของบริษัท
+            cursor.execute("SELECT SUM(total_shares) as total_shares FROM shareholder_register WHERE company_slug = %s;", (payload.company_slug,))
+            total_shares = cursor.fetchone()["total_shares"] or 0
+            if total_shares <= 0:
+                raise HTTPException(status_code=400, detail="ไม่พบจำนวนหุ้นในทะเบียนผู้ถือหุ้น")
+
+            dps = round(payload.dividend_pool_amount / total_shares, 4)
+
+            # บันทึก Declaration
+            cursor.execute(
+                """
+                INSERT INTO dividend_declarations (
+                    declaration_no, company_slug, agm_resolution_date, record_date, payout_date,
+                    total_net_profit_declared, legal_reserve_allocated, total_dividend_pool, dividend_per_share
+                )
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                ON DUPLICATE KEY UPDATE total_dividend_pool=VALUES(total_dividend_pool);
+                """,
+                (payload.declaration_no, payload.company_slug, payload.resolution_date, 
+                 payload.resolution_date, payload.payout_date, payload.total_net_profit, 
+                 legal_reserve, payload.dividend_pool_amount, dps)
+            )
+
+            # กระจายคำนวณภาษีหัก ณ ที่จ่าย 10% ให้ผู้ถือหุ้นแต่ละราย
+            cursor.execute("SELECT shareholder_code, total_shares FROM shareholder_register WHERE company_slug = %s;", (payload.company_slug,))
+            shareholders = cursor.fetchall()
+            for sh in shareholders:
+                gross = round(sh["total_shares"] * dps, 2)
+                wht = round(gross * 0.10, 2)
+                net = round(gross - wht, 2)
+                cert_no = f"50TW-{payload.declaration_no}-{sh['shareholder_code']}"
+
+                cursor.execute(
+                    """
+                    INSERT INTO shareholder_dividend_payouts (
+                        declaration_no, shareholder_code, shares_held, 
+                        gross_dividend, withholding_tax_10pct, net_payout_amount, tax_cert_no, paid_at
+                    )
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, NOW());
+                    """,
+                    (payload.declaration_no, sh["shareholder_code"], sh["total_shares"], gross, wht, net, cert_no)
+                )
+
+        conn.commit()
+
+    return {
+        "status": "success",
+        "message": f"ประกาศและจัดสรรเงินปันผล {payload.declaration_no} สำเร็จ",
+        "total_shares": total_shares,
+        "dividend_per_share": dps,
+        "legal_reserve_5pct": legal_reserve,
+        "total_dividend_pool": payload.dividend_pool_amount
+    }
+
+@router.get("/corporate/governance-summary")
+def get_corporate_governance_summary(company: str = Query(default="tp_extra"), admin_key: str = Depends(verify_admin_key)):
+    with get_db_connection() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute("SELECT * FROM corporate_directors WHERE company_slug = %s;", (company,))
+            directors = cursor.fetchall()
+            cursor.execute("SELECT * FROM shareholder_register WHERE company_slug = %s;", (company,))
+            shareholders = cursor.fetchall()
+            cursor.execute("SELECT * FROM dividend_declarations WHERE company_slug = %s ORDER BY id DESC LIMIT 5;", (company,))
+            declarations = cursor.fetchall()
+    return {
+        "status": "success",
+        "directors": directors,
+        "shareholders": shareholders,
+        "recent_dividends": declarations
+    }
