@@ -1,43 +1,46 @@
 import os
 import pymysql
-from pymysql.cursors import DictCursor
 from dbutils.pooled_db import PooledDB
 from contextlib import contextmanager
-from typing import Generator
+import logging
 
-# อ่านค่าคอนฟิกจาก Railway Variables (หรือ Local .env)
-# Railway มักให้มาเป็นตัวแปรแยก หรือเป็น MYSQL_URL
-DB_HOST = os.getenv("MYSQLHOST", os.getenv("DB_HOST", "localhost"))
-DB_USER = os.getenv("MYSQLUSER", os.getenv("DB_USER", "root"))
-DB_PASSWORD = os.getenv("MYSQLPASSWORD", os.getenv("DB_PASSWORD", ""))
-DB_PORT = int(os.getenv("MYSQLPORT", os.getenv("DB_PORT", 3306)))
-DB_NAME = os.getenv("MYSQLDATABASE", os.getenv("DB_NAME", "railway"))
+logger = logging.getLogger("db_pool")
+_pool = None
 
-# สร้าง Connection Pool
-pool = PooledDB(
-    creator=pymysql,
-    maxconnections=10,       # จำนวน connection สูงสุดใน pool
-    mincached=2,             # จำนวน connection ขั้นต่ำที่เปิดทิ้งไว้
-    maxcached=5,             # จำนวน idle connection สูงสุด
-    maxshared=3,
-    blocking=True,           # รอกรณี connection เต็มแทนที่จะ error
-    maxusage=None,
-    setsession=[],
-    ping=1,                  # ตรวจสอบการเชื่อมต่อก่อนดึงมาใช้ (แก้ปัญหา timeout บน cloud)
-    host=DB_HOST,
-    port=DB_PORT,
-    user=DB_USER,
-    password=DB_PASSWORD,
-    database=DB_NAME,
-    charset="utf8mb4",
-    cursorclass=DictCursor   # ให้ return ผลลัพธ์เป็น Dict เสมอ
-)
+def get_db_pool():
+    global _pool
+    if _pool is None:
+        db_host = os.getenv("MYSQLHOST") or os.getenv("DB_HOST") or "127.0.0.1"
+        db_user = os.getenv("MYSQLUSER") or os.getenv("DB_USER") or "root"
+        db_pass = os.getenv("MYSQLPASSWORD") or os.getenv("DB_PASSWORD") or ""
+        db_name = os.getenv("MYSQLDATABASE") or os.getenv("DB_NAME") or "railway"
+        db_port = int(os.getenv("MYSQLPORT") or os.getenv("DB_PORT") or 3306)
+
+        try:
+            _pool = PooledDB(
+                creator=pymysql,
+                mincached=0,  # หัวใจสำคัญ: ไม่ต่อ DB จนกว่าจะมีการเรียกใช้งานจริง
+                maxcached=10,
+                maxconnections=20,
+                blocking=True,
+                host=db_host,
+                user=db_user,
+                password=db_pass,
+                database=db_name,
+                port=db_port,
+                cursorclass=pymysql.cursors.DictCursor,
+                autocommit=True
+            )
+        except Exception as e:
+            logger.error(f"DB Error: {e}")
+            raise
+    return _pool
 
 @contextmanager
-def get_db_connection() -> Generator[pymysql.connections.Connection, None, None]:
-    """Context manager สำหรับดึง connection จาก pool และคืนให้อัตโนมัติ"""
-    connection = pool.connection()
+def get_db_connection():
+    pool = get_db_pool()
+    conn = pool.connection()
     try:
-        yield connection
+        yield conn
     finally:
-        connection.close()  # เป็นการ return กลับเข้า pool ไม่ได้ปิดจริง
+        conn.close()
