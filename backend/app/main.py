@@ -289,4 +289,6 @@ def reset_company_data(req: ResetRequest):
         conn.rollback()
         raise HTTPException(status_code=500, detail=str(e))
     finally:
-        conn.close()app.include_router(admin_router)
+        conn.close()
+
+app.include_router(admin_router)

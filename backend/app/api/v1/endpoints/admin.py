@@ -378,3 +378,91 @@ def confirm_handover(
         "message": f"ส่งมอบพัสดุให้ {payload.carrier_name} สำเร็จ {affected} กล่อง",
         "affected_rows": affected
     }
+
+
+class UpdateStockRequest(BaseModel):
+    sku: str
+    quantity: int
+    low_stock_threshold: Optional[int] = None
+
+@router.get("/products/inventory")
+def get_inventory(company: str = Query(default="tp_extra"), admin_key: str = Depends(verify_admin_key)):
+    with get_db_connection() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT id, sku, name, CAST(price AS FLOAT) as price, 
+                       stock_quantity, low_stock_threshold,
+                       DATE_FORMAT(updated_at, '%d/%m/%Y %H:%i') as updated_at
+                FROM products 
+                WHERE company_slug = %s
+                ORDER BY stock_quantity ASC;
+                """,
+                (company,)
+            )
+            products = cursor.fetchall()
+    return {"status": "success", "products": products}
+
+@router.post("/products/update-stock")
+def update_product_stock(payload: UpdateStockRequest, company: str = Query(default="tp_extra"), admin_key: str = Depends(verify_admin_key)):
+    with get_db_connection() as conn:
+        with conn.cursor() as cursor:
+            if payload.low_stock_threshold is not None:
+                cursor.execute(
+                    """
+                    UPDATE products 
+                    SET stock_quantity = %s, low_stock_threshold = %s, updated_at = NOW() 
+                    WHERE sku = %s AND company_slug = %s;
+                    """,
+                    (payload.quantity, payload.low_stock_threshold, payload.sku, company)
+                )
+            else:
+                cursor.execute(
+                    """
+                    UPDATE products 
+                    SET stock_quantity = %s, updated_at = NOW() 
+                    WHERE sku = %s AND company_slug = %s;
+                    """,
+                    (payload.quantity, payload.sku, company)
+                )
+        conn.commit()
+    return {"status": "success", "message": f"อัปเดตสต็อก SKU {payload.sku} เป็น {payload.quantity} เรียบร้อย"}
+
+
+@router.get("/orders/{order_no}/check-status")
+def check_order_status(order_no: str):
+    with get_db_connection() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT o.order_no, o.status, o.total_amount, o.customer_name,
+                       s.cost_amount, s.shop_fee, s.member_points_cashback, s.net_profit
+                FROM orders o
+                LEFT JOIN order_splits s ON o.order_no = s.order_no
+                WHERE o.order_no = %s;
+                """,
+                (order_no,)
+            )
+            order = cursor.fetchone()
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    return {"status": "success", "order": order}
+
+@router.get("/financial-summary")
+def get_financial_summary(company: str = Query(default="tp_extra"), admin_key: str = Depends(verify_admin_key)):
+    summary_sql = """
+        SELECT 
+            COUNT(*) as total_orders,
+            COALESCE(SUM(total_amount), 0) as total_revenue,
+            COALESCE(SUM(cost_amount), 0) as total_cost,
+            COALESCE(SUM(shop_fee), 0) as total_shop_fee,
+            COALESCE(SUM(member_points_cashback), 0) as total_points,
+            COALESCE(SUM(net_profit), 0) as total_net_profit
+        FROM order_splits
+        WHERE company_slug = %s;
+    """
+    with get_db_connection() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(summary_sql, (company,))
+            summary = cursor.fetchone()
+    return {"status": "success", "summary": summary}
